@@ -1,8 +1,8 @@
 window.DEVLOG.overview = {
   "startedAt": "2026-10-22T21:38:16Z",
-  "phase": "Parallel build (4 agents)",
+  "phase": "MVP complete",
   "integrationMinutes": 30,
-  "testRequest": "",
+  "testRequest": "Run npm run dev, open http://localhost:5173, play a few runs. Report: does launch/shift timing feel fair, is the engine sound OK (M mutes), is difficulty right, anything that looks off.",
   "log": [
     {
       "t": "17:38",
@@ -27,6 +27,14 @@ window.DEVLOG.overview = {
     {
       "t": "17:58",
       "msg": "Shop & Menus agent DONE: Balatro-style shop, pack opening, drag-reorder passives, title demo, game over, victory. Waiting on Race Scene agent."
+    },
+    {
+      "t": "18:20",
+      "msg": "Race Scene agent DONE: pixel cars, tree, tach, smoke/flames/nitro FX, synth engine audio, staging + result screens."
+    },
+    {
+      "t": "18:20",
+      "msg": "Integration: full 16-race run played headlessly through the real UI to Victory with no errors. Fixed 4 layout bugs. MVP ready for playtest."
     }
   ]
 };

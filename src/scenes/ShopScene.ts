@@ -759,7 +759,6 @@ export class ShopScene extends Phaser.Scene {
       this.packConts.push(c);
       this.packObjs.push(c);
     });
-    this.packObjs.push(txt(this, 294, 249, 'PACKS', 8, PAL.inkDim, [0.5, 0]));
   }
 
   private openPack(i: number, c: Phaser.GameObjects.Container) {

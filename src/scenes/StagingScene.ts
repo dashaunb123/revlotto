@@ -87,7 +87,7 @@ export class StagingScene extends Phaser.Scene {
     panel(this, 12, 52, 300, 152, PAL.panel, boss ? PAL.red : PAL.panelEdge);
     txt(this, 24, 60, boss ? 'BOSS' : 'OPPONENT', 8, boss ? PAL.red : PAL.inkDim);
     const name = op.name.toUpperCase();
-    txt(this, 24, 72, name, name.length <= 17 ? 16 : 8, PAL.ink);
+    txt(this, 24, 72, name, name.length <= 17 ? 16 : 8, PAL.ink).setDepth(10).setShadow(2, 2, '#07060d', 0, false, true);
     const opCar = makeCar(this, 162, 136, carVisualForOpponent(op), 2);
     opCar.setWheelSpin(0);
     this.tweens.add({ targets: opCar, y: 135, duration: 120, yoyo: true, repeat: -1, repeatDelay: 600 });
@@ -110,7 +110,7 @@ export class StagingScene extends Phaser.Scene {
 
     // ---- your car ----
     panel(this, 328, 52, 300, 152);
-    txt(this, 340, 60, 'YOUR CAR', 8, PAL.inkDim);
+    txt(this, 340, 60, 'YOUR CAR', 8, PAL.inkDim).setDepth(10);
     const me = makeCar(this, 478, 134, carVisualFromParts(s.parts), 2);
     me.setWheelSpin(0);
     this.tweens.add({ targets: me, y: 133, duration: 100, yoyo: true, repeat: -1, repeatDelay: 400 });

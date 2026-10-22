@@ -7,7 +7,7 @@ import Phaser from 'phaser';
 import { SLOTS } from '../core/types';
 import { game } from '../game/game';
 import { goToPhase } from './nav';
-import { GAME_W, PAL, RARITY_COLOR, TIER_COLOR } from '../render/palette';
+import { GAME_W, PAL, RARITY_COLOR, TIER_COLOR, hex } from '../render/palette';
 import { burst, button, panel, pop, sfx, shadowTxt, txt } from '../render/ui';
 import { ensureTextures, slotIcon } from '../render/icons';
 import { carVisualFromParts, makeCar } from '../render/car';
@@ -96,22 +96,23 @@ export class VictoryScene extends Phaser.Scene {
       this.add.image(x + 18, y + 16, slotIcon(slot)).setScale(2).setAlpha(tier === 'stock' ? 0.5 : 1);
       for (let p = 0; p < ip.level; p++) g.fillStyle(PAL.yellow, 1).fillRect(x + 6 + p * 9, y + 30, 6, 2);
     });
-    txt(this, 344, 172, 'PASSIVES', 8, PAL.inkDim);
+    txt(this, 344, 166, 'PASSIVES', 8, PAL.inkDim);
     (s.passives ?? []).forEach((id, i) => {
       let name = id;
       let col: number = PAL.ink;
       try {
         const d = game.passive(id);
+        name = d.name;
         col = RARITY_COLOR[d.rarity];
       } catch {
         /* unknown */
       }
-      txt(this, 344, 184 + i * 11, `${i + 1}. ${name.toUpperCase()}`.slice(0, 32), 8, col === PAL.inkDim ? PAL.ink : col);
+      txt(this, 344, 176 + i * 9, `${i + 1}. ${name.toUpperCase()}`.slice(0, 22), 8, col === PAL.inkDim ? PAL.ink : col);
     });
-    if (!s.passives?.length) txt(this, 344, 184, 'NONE. RESPECT.', 8, PAL.ink);
+    if (!s.passives?.length) txt(this, 344, 180, 'NONE. RESPECT.', 8, PAL.ink);
     try {
-      const car = makeCar(this, 520, 292, carVisualFromParts(s.parts), 2);
-      this.tweens.add({ targets: car, y: 291, yoyo: true, repeat: -1, duration: 80 });
+      const car = makeCar(this, 528, 296, carVisualFromParts(s.parts), 2);
+      this.tweens.add({ targets: car, y: 295, yoyo: true, repeat: -1, duration: 80 });
       this.time.addEvent({ delay: 1400, loop: true, callback: () => car.flameBurst(240) });
     } catch {
       /* car renderer unavailable */
@@ -150,7 +151,9 @@ export class VictoryScene extends Phaser.Scene {
     this.letters.forEach((L, i) => {
       if (L.scale < 0.99) return;
       L.y = 16 + Math.round(Math.sin(t * 4 + i * 0.6) * 3);
-      L.setTint(RAINBOW[(i + Math.floor(t * 6)) % RAINBOW.length]);
+      // setColor, not setTint: a tint multiplies the already-colored glyphs and muddies them.
+      const col = hex(RAINBOW[(i + Math.floor(t * 6)) % RAINBOW.length]);
+      if (L.style.color !== col) L.setColor(col);
     });
   }
 

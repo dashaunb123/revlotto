@@ -13,7 +13,7 @@ import { VictoryScene } from './scenes/VictoryScene';
 async function start() {
   // Phaser Text needs the web font loaded before the first text is drawn.
   await document.fonts.load('8px "Press Start 2P"');
-  new Phaser.Game({
+  const phaserGame = new Phaser.Game({
     type: Phaser.AUTO,
     parent: 'game',
     width: GAME_W,
@@ -24,6 +24,8 @@ async function start() {
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     scene: [BootScene, TitleScene, ShopScene, StagingScene, RaceScene, ResultScene, GameOverScene, VictoryScene],
   });
+  // Dev-only hook for the headless playtest harness.
+  if (import.meta.env.DEV) (window as unknown as { __PHASER: Phaser.Game }).__PHASER = phaserGame;
 }
 
 start();

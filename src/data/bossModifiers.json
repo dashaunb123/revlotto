@@ -1,0 +1,6 @@
+[
+  { "id": "tight_tree", "name": "Tight Tree", "desc": "Launch windows halved." },
+  { "id": "slick_track", "name": "Slick Track", "desc": "Grip x0.8." },
+  { "id": "headwind", "name": "Headwind", "desc": "Drag +25%." },
+  { "id": "redline_only", "name": "Redline Only", "desc": "Shift windows halved and your rightmost passive is disabled." }
+]

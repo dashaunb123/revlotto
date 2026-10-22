@@ -1,0 +1,49 @@
+[
+  { "id": "engine_stock", "slot": "engine", "name": "Stock V6", "tier": "stock", "cost": 0, "stats": {}, "desc": "Tired but honest." },
+  { "id": "engine_street", "slot": "engine", "name": "Built V8", "tier": "street", "cost": 6, "stats": { "power": 70, "weight": 25 }, "desc": "Two more cylinders, a lot more shove." },
+  { "id": "engine_pro", "slot": "engine", "name": "Big-block", "tier": "pro", "cost": 14, "stats": { "power": 190, "weight": 90 }, "desc": "Monster torque. Heavy up front." },
+
+  { "id": "intake_stock", "slot": "intake", "name": "Stock Airbox", "tier": "stock", "cost": 0, "stats": {}, "desc": "Breathes through a straw." },
+  { "id": "intake_street", "slot": "intake", "name": "Cold Air Intake", "tier": "street", "cost": 6, "stats": { "power": 25 }, "desc": "Cold air, warm feelings." },
+  { "id": "intake_pro", "slot": "intake", "name": "Individual Throttle Bodies", "tier": "pro", "cost": 14, "stats": { "power": 60, "shiftWindow": -0.1 }, "desc": "Screams to redline. Peaky: narrower shift window." },
+
+  { "id": "forced_induction_stock", "slot": "forced_induction", "name": "Naturally Aspirated", "tier": "stock", "cost": 0, "stats": {}, "desc": "No boost. Yet." },
+  { "id": "forced_induction_street", "slot": "forced_induction", "name": "Small Turbo", "tier": "street", "cost": 6, "stats": { "power": 55, "weight": 15 }, "desc": "Quick spool, steady gains." },
+  { "id": "forced_induction_pro", "slot": "forced_induction", "name": "Twin Turbo", "tier": "pro", "cost": 14, "stats": { "power": 200, "weight": 35 }, "quirk": "launch_lag", "desc": "Huge top end. Turbo lag softens the first second." },
+
+  { "id": "exhaust_stock", "slot": "exhaust", "name": "Stock Exhaust", "tier": "stock", "cost": 0, "stats": {}, "desc": "Quiet. Too quiet." },
+  { "id": "exhaust_street", "slot": "exhaust", "name": "Catback", "tier": "street", "cost": 6, "stats": { "power": 20, "weight": -10 }, "desc": "Louder, lighter, a little faster." },
+  { "id": "exhaust_pro", "slot": "exhaust", "name": "Long-tube Headers", "tier": "pro", "cost": 14, "stats": { "power": 55, "weight": -15 }, "desc": "Every pulse tuned for flow." },
+
+  { "id": "ecu_stock", "slot": "ecu", "name": "Stock Map", "tier": "stock", "cost": 0, "stats": {}, "desc": "Tuned for fuel economy." },
+  { "id": "ecu_street", "slot": "ecu", "name": "Street Tune", "tier": "street", "cost": 6, "stats": { "power": 25, "gearing": 0.03 }, "desc": "Timing advanced, limiter raised." },
+  { "id": "ecu_pro", "slot": "ecu", "name": "Race Tune", "tier": "pro", "cost": 14, "stats": { "power": 70, "gearing": 0.05, "shiftWindow": -0.15 }, "desc": "Aggressive map. Tiny sweet spot at the top." },
+
+  { "id": "transmission_stock", "slot": "transmission", "name": "Stock 4-speed", "tier": "stock", "cost": 0, "stats": {}, "desc": "Notchy and long." },
+  { "id": "transmission_street", "slot": "transmission", "name": "Close-ratio Box", "tier": "street", "cost": 6, "stats": { "gearing": 0.07 }, "desc": "Gears stacked tight for pull." },
+  { "id": "transmission_pro", "slot": "transmission", "name": "Sequential", "tier": "pro", "cost": 14, "stats": { "gearing": 0.1, "shiftWindow": 0.4 }, "quirk": "fast_shift", "desc": "Bang-bang shifts. Wider window, half the shift time." },
+
+  { "id": "differential_stock", "slot": "differential", "name": "Open Diff", "tier": "stock", "cost": 0, "stats": {}, "desc": "One-wheel peel." },
+  { "id": "differential_street", "slot": "differential", "name": "Limited-slip", "tier": "street", "cost": 6, "stats": { "grip": 0.08, "gearing": 0.02 }, "desc": "Both wheels pull their weight." },
+  { "id": "differential_pro", "slot": "differential", "name": "Spool", "tier": "pro", "cost": 14, "stats": { "grip": 0.18, "gearing": 0.04, "weight": 15 }, "desc": "Locked solid. Straight lines only." },
+
+  { "id": "tires_stock", "slot": "tires", "name": "All-season Tires", "tier": "stock", "cost": 0, "stats": {}, "desc": "Good in rain. Bad at everything else." },
+  { "id": "tires_street", "slot": "tires", "name": "Sport Tires", "tier": "street", "cost": 6, "stats": { "grip": 0.15 }, "desc": "Sticky rubber for the street." },
+  { "id": "tires_pro", "slot": "tires", "name": "Drag Slicks", "tier": "pro", "cost": 14, "stats": { "grip": 0.45, "drag": 0.04 }, "desc": "Massive grip, a touch of rolling drag." },
+
+  { "id": "suspension_stock", "slot": "suspension", "name": "Stock Springs", "tier": "stock", "cost": 0, "stats": {}, "desc": "Soft and wallowy." },
+  { "id": "suspension_street", "slot": "suspension", "name": "Coilovers", "tier": "street", "cost": 6, "stats": { "grip": 0.08, "drag": -0.02 }, "desc": "Lower, stiffer, planted." },
+  { "id": "suspension_pro", "slot": "suspension", "name": "Drag-launch Setup", "tier": "pro", "cost": 14, "stats": { "grip": 0.2 }, "quirk": "two_step", "desc": "Squats on launch. Two-step widens launch windows 50%." },
+
+  { "id": "chassis_stock", "slot": "chassis", "name": "Stock Chassis", "tier": "stock", "cost": 0, "stats": {}, "desc": "Full interior, spare tire, regrets." },
+  { "id": "chassis_street", "slot": "chassis", "name": "Seat Delete", "tier": "street", "cost": 6, "stats": { "weight": -90 }, "desc": "Passengers are dead weight." },
+  { "id": "chassis_pro", "slot": "chassis", "name": "Carbon Panels", "tier": "pro", "cost": 14, "stats": { "weight": -230 }, "desc": "Hood, trunk, doors: all carbon." },
+
+  { "id": "aero_stock", "slot": "aero", "name": "Stock Body", "tier": "stock", "cost": 0, "stats": {}, "desc": "Shaped by accountants." },
+  { "id": "aero_street", "slot": "aero", "name": "Spoiler", "tier": "street", "cost": 6, "stats": { "drag": -0.1, "grip": 0.03 }, "desc": "Cleaner air, a hint of downforce." },
+  { "id": "aero_pro", "slot": "aero", "name": "Full Aero Kit", "tier": "pro", "cost": 14, "stats": { "drag": -0.25, "grip": 0.05, "weight": 20 }, "desc": "Splitter to diffuser. Slices air at the top end." },
+
+  { "id": "nitrous_stock", "slot": "nitrous", "name": "No Nitrous", "tier": "stock", "cost": 0, "stats": {}, "desc": "Nothing to spray." },
+  { "id": "nitrous_street", "slot": "nitrous", "name": "Single Shot", "tier": "street", "cost": 6, "stats": { "nitroPower": 90, "nitroDuration": 2.0, "weight": 10 }, "desc": "One big hit. Press N." },
+  { "id": "nitrous_pro", "slot": "nitrous", "name": "Progressive Kit", "tier": "pro", "cost": 14, "stats": { "nitroPower": 160, "nitroDuration": 3.5, "weight": 15 }, "desc": "A long, hard pull. Press N, and avoid wheelspin." }
+]

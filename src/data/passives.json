@@ -1,0 +1,12 @@
+[
+  { "id": "clean_launcher", "name": "Clean Launcher", "desc": "Perfect launch: Power x1.10 for the race.", "trigger": "launch", "cost": 8, "rarity": "common" },
+  { "id": "shift_savant", "name": "Shift Savant", "desc": "Each Perfect shift: +3% Power for the rest of the race.", "trigger": "shift", "cost": 8, "rarity": "common" },
+  { "id": "double_clutch", "name": "Double Clutch", "desc": "Each Perfect shift: Gearing x1.05, compounding.", "trigger": "shift", "cost": 8, "rarity": "uncommon" },
+  { "id": "redline_gambler", "name": "Redline Gambler", "desc": "Perfect window 40% narrower. Perfect shifts give Power x1.25 for that gear.", "trigger": "shift", "cost": 8, "rarity": "rare" },
+  { "id": "sticky_compound", "name": "Sticky Compound", "desc": "Grip x1.15 while in 1st gear.", "trigger": "race_start", "cost": 8, "rarity": "common" },
+  { "id": "featherweight", "name": "Featherweight", "desc": "Weight x0.95.", "trigger": "always", "cost": 8, "rarity": "common" },
+  { "id": "boost_brain", "name": "Boost Brain", "desc": "Forced induction and nitrous parts count 50% stronger.", "trigger": "always", "cost": 8, "rarity": "uncommon" },
+  { "id": "garage_rat", "name": "Garage Rat", "desc": "+2% Power per slot with a non-Stock part.", "trigger": "always", "cost": 8, "rarity": "uncommon" },
+  { "id": "cash_cow", "name": "Cash Cow", "desc": "Earn $2 per Perfect grade in a race.", "trigger": "finish", "cost": 8, "rarity": "common" },
+  { "id": "finish_line_flair", "name": "Finish Line Flair", "desc": "Win by less than 0.1 s: earn $5.", "trigger": "finish", "cost": 8, "rarity": "uncommon" }
+]

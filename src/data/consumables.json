@@ -1,0 +1,6 @@
+[
+  { "id": "nitro_bottle", "name": "Nitro Bottle", "desc": "Power x1.15 for one race.", "cost": 3, "rarity": "common" },
+  { "id": "grip_spray", "name": "Grip Spray", "desc": "Grip x1.20 for the first 3 s.", "cost": 3, "rarity": "common" },
+  { "id": "wide_tach", "name": "Wide Tach", "desc": "Perfect shift window +30% for one race.", "cost": 3, "rarity": "common" },
+  { "id": "mulligan", "name": "Mulligan", "desc": "If you lose this race, rerun it once.", "cost": 3, "rarity": "rare" }
+]

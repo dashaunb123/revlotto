@@ -1,0 +1,21 @@
+[
+  { "round": 1, "race": 0, "name": "Dez 'Daily Driver'", "targetEt": 14.30, "car": { "body": "compact", "color": "#8a9bb0", "accent": "#e8e8e8" }, "taunt": "My mom needs this car back by six." },
+  { "round": 1, "race": 1, "name": "Pizza Pete", "targetEt": 13.60, "car": { "body": "compact", "color": "#e04a2f", "accent": "#ffd23f" }, "taunt": "Thirty minutes or it's free. You've got fourteen seconds." },
+  { "round": 1, "race": 2, "name": "Tess Tailgate", "targetEt": 13.10, "car": { "body": "truck", "color": "#3f7d4e", "accent": "#d9c27a" }, "taunt": "Hope you like the view of my tailgate." },
+  { "round": 1, "race": 3, "name": "Sheriff Buckshot", "targetEt": 12.70, "car": { "body": "muscle", "color": "#1d1f2b", "accent": "#f5f5f5" }, "bossModifier": "tight_tree", "taunt": "I run the tree in this town. Blink and you're done." },
+
+  { "round": 2, "race": 0, "name": "Vinny Vapes", "targetEt": 11.90, "car": { "body": "compact", "color": "#7b4fd6", "accent": "#41e0c8" }, "taunt": "My cloud's thicker than your tire smoke." },
+  { "round": 2, "race": 1, "name": "Grandma Gloria", "targetEt": 11.50, "car": { "body": "wedge", "color": "#f2a7c3", "accent": "#ffffff" }, "taunt": "I was racing before your daddy had a license." },
+  { "round": 2, "race": 2, "name": "Rex Ratchet", "targetEt": 11.10, "car": { "body": "muscle", "color": "#c26a1b", "accent": "#2b2b2b" }, "taunt": "Built it in my driveway. Out of spite." },
+  { "round": 2, "race": 3, "name": "Oilslick Olga", "targetEt": 10.80, "car": { "body": "truck", "color": "#111111", "accent": "#5cf2ff" }, "bossModifier": "slick_track", "taunt": "Oops. Did I spill something in your lane?" },
+
+  { "round": 3, "race": 0, "name": "Kenji Kickdown", "targetEt": 10.20, "car": { "body": "wedge", "color": "#f5f5f5", "accent": "#e8202a" }, "taunt": "Downshift. Pass. Goodbye." },
+  { "round": 3, "race": 1, "name": "Mama Torque", "targetEt": 9.90, "car": { "body": "muscle", "color": "#2c6fd1", "accent": "#ffffff" }, "taunt": "Eat your vegetables. Then eat my exhaust." },
+  { "round": 3, "race": 2, "name": "Static Sasha", "targetEt": 9.60, "car": { "body": "super", "color": "#ffe14d", "accent": "#1a1a1a" }, "taunt": "My car runs on lightning. Don't ask." },
+  { "round": 3, "race": 3, "name": "Gale Force Gus", "targetEt": 9.30, "car": { "body": "truck", "color": "#4a9fd8", "accent": "#ffffff" }, "bossModifier": "headwind", "taunt": "Feel that breeze? That's me, coming for you." },
+
+  { "round": 4, "race": 0, "name": "Nova Nitro", "targetEt": 9.00, "car": { "body": "super", "color": "#ff3df0", "accent": "#3dfff2" }, "taunt": "I don't brake. I just run out of track." },
+  { "round": 4, "race": 1, "name": "The Accountant", "targetEt": 8.70, "car": { "body": "wedge", "color": "#2b2b2b", "accent": "#7dff6a" }, "taunt": "I've calculated your loss to the thousandth." },
+  { "round": 4, "race": 2, "name": "Duchess Dyno", "targetEt": 8.40, "car": { "body": "super", "color": "#b8122a", "accent": "#ffd700" }, "taunt": "Two thousand horsepower and impeccable manners." },
+  { "round": 4, "race": 3, "name": "Redline Rosa", "targetEt": 8.10, "car": { "body": "super", "color": "#ff2a2a", "accent": "#ffffff" }, "bossModifier": "redline_only", "taunt": "One sweet spot on my tach. Hit it or go home." }
+]

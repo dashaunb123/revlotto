@@ -1,0 +1,12 @@
+{
+  "starter": { "power": 200, "grip": 1.0, "weight": 1400, "gearing": 1.0, "drag": 1.0, "shiftWindow": 1.0, "nitroPower": 0, "nitroDuration": 0 },
+  "economy": { "startCash": 10, "regularWin": 6, "bossWin": 12, "timeBonusPerTenth": 1, "timeBonusCap": 4, "sellRatio": 0.5 },
+  "prices": { "street": 6, "pro": 14, "partsPack": 6, "powerPack": 8, "passive": 8, "consumable": 3, "rerollBase": 3, "rerollStep": 1 },
+  "shop": {
+    "proShareBase": 0.3,
+    "proShareStepPerRound": 0.1,
+    "powerPackOdds": { "passive": 0.5, "consumable": 0.4, "tuning": 0.1 },
+    "rarityWeights": { "common": 1, "uncommon": 0.6, "rare": 0.2 }
+  },
+  "limits": { "passiveSlots": 5, "consumableSlots": 2, "maxTuning": 3, "tuningPerLevel": 0.1 }
+}

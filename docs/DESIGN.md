@@ -30,7 +30,7 @@ Platform: desktop browser, keyboard (Space = launch/shift, N = nitrous, mouse fo
 
 - Space for launch and every shift. N for nitrous.
 - Tree: three ambers 0.5 s apart, then green. Reaction = green → press.
-  - Launch: Perfect 0–60 ms, Good 61–150 ms, Miss > 150 ms.
+  - Launch: Perfect 0–120 ms, Good 121–250 ms, Miss > 250 ms. Presses up to 40 ms before green count as a 0 ms launch (lag grace). (Playtest change: the original 60/150 ms windows were faster than human reaction.)
   - Press before green = false start: Miss + 0.3 s penalty (car still launches at green).
   - Launch grade scales first-gear traction and power for the first 1.5 s.
 - 4 gears. RPM climbs to redline. Shift window near redline: inside = Perfect, slightly outside = Good, far = Miss.

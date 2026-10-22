@@ -1,0 +1,25 @@
+{
+  "name": "revlotto",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "balance": "tsx scripts/balance.ts",
+    "test:sim": "tsx scripts/simSmoke.ts"
+  },
+  "dependencies": {
+    "@fontsource/press-start-2p": "^5.2.5",
+    "phaser": "^3.90.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  }
+}

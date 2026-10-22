@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Revlotto Devlog</title>
+<style>
+  :root {
+    --bg: #0b0a14; --panel: #1c1830; --edge: #4a3f78; --ink: #f4ecd8; --dim: #9a8fb8;
+    --red: #e8413c; --yellow: #f7d23e; --green: #5ad25a; --teal: #38c6c0; --orange: #f28c28; --pink: #f25c9a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 28px; margin: 0; letter-spacing: 2px; color: var(--yellow); text-shadow: 3px 3px 0 var(--red); }
+  .sub { color: var(--dim); margin: 4px 0 20px; }
+  .hero { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .tile { background: var(--panel); border: 2px solid var(--edge); box-shadow: 4px 4px 0 #000; padding: 12px 14px; }
+  .tile .k { color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+  .tile .v { font-size: 24px; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .bar { height: 14px; background: #000; border: 2px solid var(--edge); margin-top: 8px; position: relative; }
+  .bar > i { position: absolute; inset: 0 auto 0 0; background: repeating-linear-gradient(90deg, var(--green) 0 8px, #46b046 8px 10px); }
+  .agents { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 14px; }
+  .agent { background: var(--panel); border: 2px solid var(--edge); box-shadow: 4px 4px 0 #000; padding: 14px; }
+  .agent h2 { font-size: 17px; margin: 0; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .role { color: var(--dim); font-size: 13px; margin: 2px 0 8px; }
+  .badge { font-size: 11px; padding: 2px 8px; border: 2px solid currentColor; text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; }
+  .working { color: var(--yellow); } .done { color: var(--green); } .blocked { color: var(--red); } .queued { color: var(--dim); }
+  .now { margin: 10px 0 6px; } .now b { color: var(--teal); }
+  ul { margin: 6px 0 0; padding-left: 18px; } li { margin: 2px 0; }
+  li.ok::marker { content: "✓ "; color: var(--green); } li.todo::marker { content: "· "; color: var(--dim); }
+  details summary { cursor: pointer; color: var(--dim); margin-top: 8px; }
+  .meta { color: var(--dim); font-size: 12px; margin-top: 10px; }
+  .notes { color: var(--orange); font-size: 13px; margin-top: 8px; }
+  h3 { margin: 28px 0 10px; font-size: 18px; color: var(--teal); }
+  .log { background: var(--panel); border: 2px solid var(--edge); padding: 6px 14px; }
+  .log div { padding: 6px 0; border-bottom: 1px dashed #3a3352; } .log div:last-child { border: 0; }
+  .log time { color: var(--dim); margin-right: 10px; }
+  .test { background: #2a1430; border: 2px solid var(--pink); padding: 12px 14px; margin-top: 20px; }
+  .test b { color: var(--pink); }
+  .empty { color: var(--dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>REVLOTTO // DEVLOG</h1>
+  <div class="sub" id="sub">Drag racing roguelike · live build status · auto-refreshes every 20 s</div>
+  <div class="hero" id="hero"></div>
+  <div id="testbox"></div>
+  <h3>Agents</h3>
+  <div class="agents" id="agents"></div>
+  <h3>Build log</h3>
+  <div class="log" id="log"></div>
+</div>
+<script>window.DEVLOG = { agents: {}, overview: null };</script>
+<script src="devlog/status/overview.js"></script>
+<script src="devlog/status/engine.js"></script>
+<script src="devlog/status/run.js"></script>
+<script src="devlog/status/race.js"></script>
+<script src="devlog/status/shop.js"></script>
+<script src="devlog/status/integration.js"></script>
+<script>
+(function () {
+  const D = window.DEVLOG, ov = D.overview || {};
+  const order = ['engine', 'run', 'race', 'shop', 'integration'];
+  const agents = order.map(k => D.agents[k]).filter(Boolean);
+  const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  const ago = iso => {
+    if (!iso) return 'never';
+    const m = Math.round((Date.now() - new Date(iso)) / 60000);
+    return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : Math.round(m / 6) / 10 + ' h ago';
+  };
+  const fmtTime = d => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+  const avg = agents.length ? Math.round(agents.reduce((s, a) => s + (a.progress || 0), 0) / agents.length) : 0;
+  const remaining = Math.max(0, ...agents.map(a => a.status === 'done' ? 0 : (a.etaMinutes ?? 0)));
+  const integ = ov.integrationMinutes ?? 0;
+  const allDone = agents.length && agents.every(a => a.status === 'done');
+  const etaMin = allDone ? 0 : remaining + (D.agents.integration?.status === 'done' ? 0 : integ);
+  const etaAt = new Date(Date.now() + etaMin * 60000);
+
+  document.getElementById('hero').innerHTML = `
+    <div class="tile"><div class="k">Overall progress</div><div class="v">${avg}%</div><div class="bar"><i style="width:${avg}%"></i></div></div>
+    <div class="tile"><div class="k">Estimated done</div><div class="v">${allDone ? 'Done' : '~' + fmtTime(etaAt)}</div><div class="k" style="margin-top:6px">${allDone ? '' : 'about ' + etaMin + ' min left (agents + integration)'}</div></div>
+    <div class="tile"><div class="k">Agents</div><div class="v">${agents.filter(a => a.status === 'done').length} / ${agents.length} done</div><div class="k" style="margin-top:6px">${agents.filter(a => a.status === 'working').length} working</div></div>
+    <div class="tile"><div class="k">Started</div><div class="v">${ov.startedAt ? fmtTime(new Date(ov.startedAt)) : '-'}</div><div class="k" style="margin-top:6px">phase: ${esc(ov.phase || '-')}</div></div>`;
+
+  if (ov.testRequest) document.getElementById('testbox').innerHTML = `<div class="test"><b>Please test:</b> ${esc(ov.testRequest)}</div>`;
+
+  document.getElementById('agents').innerHTML = agents.length ? agents.map(a => `
+    <div class="agent">
+      <h2><span>${esc(a.name)}</span><span class="badge ${esc(a.status)}">${esc(a.status)}</span></h2>
+      <div class="role">${esc(a.role)}</div>
+      <div class="bar"><i style="width:${a.progress || 0}%"></i></div>
+      <div class="now"><b>${a.progress || 0}%</b> · ${esc(a.current || '')}</div>
+      ${a.notes ? `<div class="notes">${esc(a.notes)}</div>` : ''}
+      <ul>${(a.done || []).map(x => `<li class="ok">${esc(x)}</li>`).join('')}${(a.todo || []).map(x => `<li class="todo">${esc(x)}</li>`).join('')}</ul>
+      <div class="meta">updated ${ago(a.updated)} · ${a.status === 'done' ? 'finished' : 'ETA ~' + (a.etaMinutes ?? '?') + ' min'}</div>
+    </div>`).join('') : '<div class="empty">No agent status yet.</div>';
+
+  const log = (ov.log || []).slice().reverse();
+  document.getElementById('log').innerHTML = log.length ? log.map(e => `<div><time>${esc(e.t)}</time>${esc(e.msg)}</div>`).join('') : '<div class="empty">Nothing yet.</div>';
+
+  setTimeout(() => location.reload(), 20000);
+})();
+</script>
+</body>
+</html>

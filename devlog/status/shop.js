@@ -1,0 +1,1 @@
+window.DEVLOG.agents["shop"] = { name: "Shop & Menus", role: "Title, Shop, pack opening, Game Over, Victory, UI kit", status: "queued", progress: 0, current: "Starting up", done: [], todo: [], notes: "", etaMinutes: 90, updated: "2026-10-22T21:38:16Z" };

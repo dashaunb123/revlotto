@@ -1,0 +1,1 @@
+window.DEVLOG.agents["run"] = { name: "Run & Economy", role: "RunState, shop generation, packs, economy, actions API", status: "queued", progress: 0, current: "Starting up", done: [], todo: [], notes: "", etaMinutes: 90, updated: "2026-10-22T21:38:16Z" };

@@ -1,0 +1,1 @@
+window.DEVLOG.agents["engine"] = { name: "Engine, Sim & Content", role: "Race sim, stat pipeline, passives, 36 parts, balance harness", status: "queued", progress: 0, current: "Starting up", done: [], todo: [], notes: "", etaMinutes: 90, updated: "2026-10-22T21:38:16Z" };

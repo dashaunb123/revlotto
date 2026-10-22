@@ -1,0 +1,1 @@
+window.DEVLOG.agents["integration"] = { name: "Integration (lead)", role: "Wire scenes together, fix cross-agent issues, full-run playthrough", status: "queued", progress: 0, current: "Waiting for agents", done: [], todo: ["Typecheck + build", "Wire full 16-race loop", "Smoke-test a run"], notes: "", etaMinutes: 30, updated: "2026-10-22T21:38:16Z" };

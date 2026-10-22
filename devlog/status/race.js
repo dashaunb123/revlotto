@@ -1,0 +1,1 @@
+window.DEVLOG.agents["race"] = { name: "Race Scene & Pixel Car", role: "Race, Staging and Result scenes, light tree, RPM gauge, pixel car", status: "queued", progress: 0, current: "Starting up", done: [], todo: [], notes: "", etaMinutes: 90, updated: "2026-10-22T21:38:16Z" };

@@ -39,6 +39,8 @@
   .test { background: #2a1430; border: 2px solid var(--pink); padding: 12px 14px; margin-top: 20px; }
   .test b { color: var(--pink); }
   .empty { color: var(--dim); }
+  .act { margin-top: 10px; padding-top: 8px; border-top: 1px dashed #3a3352; font-size: 12px; color: var(--dim); }
+  .act b { color: var(--green); } .act code { color: var(--ink); }
 </style>
 </head>
 <body>
@@ -59,11 +61,18 @@
 <script src="devlog/status/race.js"></script>
 <script src="devlog/status/shop.js"></script>
 <script src="devlog/status/integration.js"></script>
+<script src="devlog/status/activity.js"></script>
 <script>
 (function () {
   const D = window.DEVLOG, ov = D.overview || {};
   const order = ['engine', 'run', 'race', 'shop', 'integration'];
-  const agents = order.map(k => D.agents[k]).filter(Boolean);
+  const agents = order.map(k => D.agents[k] && Object.assign(D.agents[k], { key: k })).filter(Boolean);
+  const actHtml = k => {
+    const x = D.activity && D.activity.agents[k];
+    if (!x) return '';
+    const r = x.recent[0];
+    return `<div class="act"><b>LIVE</b> ${x.files} files · ${x.lines.toLocaleString()} lines written${r ? `<br>last edit <code>${esc(r.file)}</code> ${ago(r.at)}` : ''}</div>`;
+  };
   const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
   const ago = iso => {
     if (!iso) return 'never';
@@ -95,7 +104,8 @@
       <div class="now"><b>${a.progress || 0}%</b> · ${esc(a.current || '')}</div>
       ${a.notes ? `<div class="notes">${esc(a.notes)}</div>` : ''}
       <ul>${(a.done || []).map(x => `<li class="ok">${esc(x)}</li>`).join('')}${(a.todo || []).map(x => `<li class="todo">${esc(x)}</li>`).join('')}</ul>
-      <div class="meta">updated ${ago(a.updated)} · ${a.status === 'done' ? 'finished' : 'ETA ~' + (a.etaMinutes ?? '?') + ' min'}</div>
+      ${actHtml(a.key)}
+      <div class="meta">status note updated ${ago(a.updated)} · ${a.status === 'done' ? 'finished' : 'ETA ~' + (a.etaMinutes ?? '?') + ' min'}</div>
     </div>`).join('') : '<div class="empty">No agent status yet.</div>';
 
   const log = (ov.log || []).slice().reverse();

@@ -2,7 +2,7 @@
 // The container's origin is the card's center so it can tilt / flip around it.
 import Phaser from 'phaser';
 import { PAL, hex } from '../palette';
-import { txt, wrap } from '../ui';
+import { hitBox, txt, wrap } from '../ui';
 
 export interface CardSpec {
   w: number;
@@ -145,7 +145,7 @@ export class Card extends Phaser.GameObjects.Container {
 
   /** Make the whole card clickable (hit area in local, centered coords). */
   makeInteractive(): this {
-    this.setInteractive(new Phaser.Geom.Rectangle(-this.w / 2, -this.h / 2, this.w, this.h), Phaser.Geom.Rectangle.Contains);
+    hitBox(this, -this.w / 2, -this.h / 2, this.w, this.h);
     if (this.input) this.input.cursor = 'pointer';
     return this;
   }

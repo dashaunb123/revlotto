@@ -28,6 +28,7 @@ import {
   contextMenu,
   drawPanel,
   floatText,
+  hitBox,
   hoverTilt,
   panel,
   pop,
@@ -392,7 +393,7 @@ export class ShopScene extends Phaser.Scene {
       }
       c.add([g, icon, lbl]);
       c.setSize(44, 58);
-      c.setInteractive(new Phaser.Geom.Rectangle(-22, -29, 44, 58), Phaser.Geom.Rectangle.Contains);
+      hitBox(c, -22, -29, 44, 58);
       if (c.input) c.input.cursor = 'pointer';
       c.on('pointerover', () => {
         const t = installedPartTip(slot);
@@ -737,7 +738,7 @@ export class ShopScene extends Phaser.Scene {
       const c = this.add.container(x, PACK_Y, [img, label, chipG, chipT]);
       if (!afford) img.setAlpha(0.5);
       c.setSize(PACK_W, 76);
-      c.setInteractive(new Phaser.Geom.Rectangle(-PACK_W / 2, -38, PACK_W, 76), Phaser.Geom.Rectangle.Contains);
+      hitBox(c, -PACK_W / 2, -38, PACK_W, 76);
       if (c.input) c.input.cursor = 'pointer';
       hoverTilt(this, c, PACK_W, 76, 1.1);
       if (free) this.tweens.add({ targets: chipT, alpha: 0.3, yoyo: true, repeat: -1, duration: 400 });

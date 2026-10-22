@@ -7,7 +7,7 @@ import { sfx, toggleMute, unlockAudio } from '../render/audio';
 import { carVisualForOpponent, carVisualFromParts, makeCar } from '../render/car';
 import { fxText, popup } from '../render/fx';
 import { GAME_H, GAME_W, PAL, hex } from '../render/palette';
-import { panel, txt } from '../render/ui';
+import { hitBox, panel, txt } from '../render/ui';
 
 const STATS: { key: StatKey; label: string; fmt: (v: number) => string }[] = [
   { key: 'power', label: 'POWER', fmt: (v) => String(Math.round(v)) },
@@ -190,7 +190,7 @@ export class StagingScene extends Phaser.Scene {
         txt(this, 8, 24, on ? 'USING' : 'OFF', 8, on ? PAL.pink : PAL.inkDim),
       ]);
       card.setSize(134, 40);
-      card.setInteractive(new Phaser.Geom.Rectangle(0, 0, 134, 40), Phaser.Geom.Rectangle.Contains);
+      hitBox(card, 0, 0, 134, 40);
       card.on('pointerup', () => this.toggle(i));
       card.on('pointerover', () => this.hintText.setText(def.desc.toUpperCase().slice(0, 34)).setColor(hex(PAL.pink)));
       card.on('pointerout', () => this.hintText.setText(CONS_LABEL).setColor(hex(PAL.inkDim)));
@@ -368,7 +368,7 @@ export class StagingScene extends Phaser.Scene {
     draw();
     c.add([g, t]);
     c.setSize(w, h);
-    c.setInteractive(new Phaser.Geom.Rectangle(0, 0, w, h), Phaser.Geom.Rectangle.Contains);
+    hitBox(c, 0, 0, w, h);
     c.on('pointerover', () => ((hover = true), draw()));
     c.on('pointerout', () => ((hover = false), draw()));
     c.on('pointerup', () => this.go(true));

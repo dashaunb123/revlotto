@@ -71,6 +71,18 @@ export interface Button {
   setLabel(s: string): void;
 }
 
+/**
+ * Make a container clickable over the local box (x, y, w, h).
+ * Phaser adds a sized container's displayOrigin (half its size) to the local pointer position
+ * before testing the hit area, so the rectangle has to be shifted by the same amount.
+ */
+export function hitBox(c: Phaser.GameObjects.Container, x: number, y: number, w: number, h: number): void {
+  c.setInteractive(
+    new Phaser.Geom.Rectangle(x + c.displayOriginX, y + c.displayOriginY, w, h),
+    Phaser.Geom.Rectangle.Contains,
+  );
+}
+
 export function button(
   scene: Phaser.Scene,
   x: number,
@@ -103,7 +115,7 @@ export function button(
   };
   c.add([g, t]);
   c.setSize(w, h);
-  c.setInteractive(new Phaser.Geom.Rectangle(0, 0, w, h), Phaser.Geom.Rectangle.Contains);
+  hitBox(c, 0, 0, w, h);
   c.on('pointerover', () => {
     hover = true;
     draw();

@@ -5,7 +5,7 @@ import { game } from '../game/game';
 import { sfx, toggleMute, unlockAudio } from '../render/audio';
 import { fxText, popup, stamp } from '../render/fx';
 import { GAME_H, GAME_W, GRADE_COLOR, PAL, hex } from '../render/palette';
-import { panel, txt } from '../render/ui';
+import { hitBox, panel, txt } from '../render/ui';
 import { goToPhase } from './nav';
 
 function gradeName(e: GradeEvent): string {
@@ -235,7 +235,7 @@ export class ResultScene extends Phaser.Scene {
     const t = fxText(this, w / 2, h / 2, won ? 'CONTINUE' : 'GAME OVER', 8, PAL.ink, 3);
     c.add([g, t]);
     c.setSize(w, h);
-    c.setInteractive(new Phaser.Geom.Rectangle(0, 0, w, h), Phaser.Geom.Rectangle.Contains);
+    hitBox(c, 0, 0, w, h);
     c.on('pointerup', () => this.next(true));
     this.tweens.add({ targets: t, scale: 1.15, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     txt(this, 16, 328, 'SPACE / ENTER TO CONTINUE', 8, PAL.inkDim);

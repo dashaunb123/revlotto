@@ -18,8 +18,8 @@ interface ProfileCfg {
 
 const PROFILES: Record<BotProfile, ProfileCfg> = {
   perfect: { reaction: [0.02, 0.05], falseStartChance: 0, shiftSigma: 0.15, shiftBias: 0, lateLimiterChance: 0, nitroGear: [2, 2] },
-  average: { reaction: [0.07, 0.19], falseStartChance: 0.02, shiftSigma: 1.3, shiftBias: 0.3, lateLimiterChance: 0.05, nitroGear: [2, 3] },
-  sloppy: { reaction: [0.16, 0.36], falseStartChance: 0.1, shiftSigma: 2.6, shiftBias: 0.8, lateLimiterChance: 0.2, nitroGear: [1, 4] },
+  average: { reaction: [0.09, 0.3], falseStartChance: 0.02, shiftSigma: 1.3, shiftBias: 0.3, lateLimiterChance: 0.05, nitroGear: [2, 3] },
+  sloppy: { reaction: [0.2, 0.45], falseStartChance: 0.1, shiftSigma: 2.6, shiftBias: 0.8, lateLimiterChance: 0.2, nitroGear: [1, 4] },
 };
 
 function gauss(rng: Rng): number {

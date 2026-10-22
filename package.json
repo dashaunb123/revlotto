@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "balance": "tsx scripts/balance.ts",
-    "test:sim": "tsx scripts/simSmoke.ts"
+    "test:sim": "tsx scripts/simSmoke.ts",
+    "timing": "tsx scripts/timingWindows.ts"
   },
   "dependencies": {
     "@fontsource/press-start-2p": "^5.2.5",

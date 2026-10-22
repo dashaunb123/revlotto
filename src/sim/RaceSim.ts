@@ -34,8 +34,12 @@ const IDLE_RPM = 0.13;
 const REDLINE_ABS = 7500;
 const IDLE_ABS = 900;
 
-const LAUNCH_PERFECT = 0.06;
-const LAUNCH_GOOD = 0.15;
+// Human visual reaction is ~0.18-0.25 s, so Perfect needs anticipating the tree's rhythm and
+// Good is reachable by a sharp pure reaction.
+const LAUNCH_PERFECT = 0.12;
+const LAUNCH_GOOD = 0.25;
+/** Presses this close before green count as a 0 ms launch, absorbing display and input lag. */
+const EARLY_GRACE = 0.04;
 const FALSE_START_PENALTY = 0.3;
 const AUTO_LAUNCH_T = 1.0;
 const LAUNCH_EFFECT_SECONDS = 1.5;
@@ -113,6 +117,7 @@ export class RaceSim implements IRaceSim {
   private readonly vTop: number[];
   private readonly quirks: Set<string>;
   private falseStarted = false;
+  private earlyPress = false;
   private launchTime = 0; // sim t at launch
   private launchGrade: Grade = 'miss';
   private shiftTimer = 0;
@@ -201,13 +206,17 @@ export class RaceSim implements IRaceSim {
 
     // 'go'
     if (!s.launched) {
+      if (s.t < 0 && s.t >= -EARLY_GRACE && !this.falseStarted) {
+        this.earlyPress = true; // graded and launched at green
+        return null;
+      }
       if (s.t < 0) {
-        if (this.falseStarted) return null;
+        if (this.falseStarted || this.earlyPress) return null;
         this.falseStarted = true;
         s.penalty += FALSE_START_PENALTY;
         return this.pushGrade({ kind: 'false_start', grade: 'miss', t: s.t, offsetMs: Math.round(s.t * 1000), label: 'FALSE START' });
       }
-      if (this.falseStarted) return null; // launches automatically at green
+      if (this.falseStarted || this.earlyPress) return null; // launches automatically at green
       const reaction = s.t;
       const m = this.launchWindowMult();
       const grade: Grade = reaction <= LAUNCH_PERFECT * m ? 'perfect' : reaction <= LAUNCH_GOOD * m ? 'good' : 'miss';
@@ -278,6 +287,10 @@ export class RaceSim implements IRaceSim {
         s.phase = 'running';
         for (const h of this.setup.hooks) h.onStart?.(this.ctx);
         if (this.falseStarted) this.doLaunch('miss', 0);
+        else if (this.earlyPress) {
+          this.pushGrade({ kind: 'launch', grade: 'perfect', t: 0, offsetMs: 0, label: 'PERFECT' });
+          this.doLaunch('perfect', 0);
+        }
       }
       return;
     }

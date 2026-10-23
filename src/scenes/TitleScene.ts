@@ -1,28 +1,25 @@
 // Title: wobbling chunky logo, a light tree that keeps launching a car down the strip,
-// New Run / Continue / seed entry / How to play.
+// New Run (-> RunSetup: car, heat, seed) / Continue / How to play / Paint shop, plus a subtle meta progress line.
 //
 // LAYOUT (640x360)
 //   light tree   x 40..80, y 40..160 (left)       logo "REVLOTTO" 32px, letters x 176+36i, y 52
-//   subtitle y 92                                   buttons x 240..400: NEW RUN y128, CONTINUE y164
-//   seed box (240,200,160,20)   HOW TO PLAY (240,228,160,20)    controls hint y 268
+//   subtitle y 96, progress line y 108             buttons x 240..400: NEW RUN y124, CONTINUE y160
+//   HOW TO PLAY (240,y+8,160,20)  PAINT SHOP (+26)  key hint below
 //   road y 296..360 with a car launching at ground y 334
 import Phaser from 'phaser';
 import { game, hasSavedRun, loadSavedRun } from '../game/game';
 import { goToPhase } from './nav';
 import { GAME_W, PAL, hex } from '../render/palette';
-import { button, drawPanel, panel, pop, sfx, shadowTxt, shake, txt, type Button } from '../render/ui';
+import { button, drawFlame, drawPanel, heatColor, pop, sfx, shadowTxt, shake, txt, type Button } from '../render/ui';
 import { ensureTextures } from '../render/icons';
 import { carVisualForOpponent, carVisualFromParts, makeCar } from '../render/car';
+import { loadLook } from '../game/cosmetics';
 
 const LOGO = 'REVLOTTO';
 const LOGO_COLORS = [PAL.yellow, PAL.yellow, PAL.orange, PAL.orange, PAL.red, PAL.red, PAL.pink, PAL.pink];
 
 export class TitleScene extends Phaser.Scene {
   private letters: { top: Phaser.GameObjects.Text; mid: Phaser.GameObjects.Text; sh: Phaser.GameObjects.Text; x: number }[] = [];
-  private seed = '';
-  private seedFocus = false;
-  private seedText!: Phaser.GameObjects.Text;
-  private seedBox!: Phaser.GameObjects.Graphics;
   private help: Phaser.GameObjects.Container | null = null;
   private treeG: Phaser.GameObjects.Graphics | null = null;
   private road!: Phaser.GameObjects.Graphics;
@@ -36,8 +33,6 @@ export class TitleScene extends Phaser.Scene {
 
   create() {
     this.letters = [];
-    this.seed = '';
-    this.seedFocus = false;
     this.help = null;
     this.starting = false;
     this.t0 = this.time.now;
@@ -81,75 +76,58 @@ export class TitleScene extends Phaser.Scene {
       y += 36;
     }
     void contBtn;
-    // seed box
-    txt(this, 236, y + 6, 'SEED', 8, PAL.inkDim, [1, 0]);
-    this.seedBox = this.add.graphics();
-    this.seedText = txt(this, 320, y + 10, '', 8, PAL.ink, [0.5, 0.5]);
-    const sz = this.add.zone(240, y, 160, 20).setOrigin(0, 0).setInteractive({ cursor: 'text' });
-    sz.on('pointerup', () => {
-      this.seedFocus = true;
-      sfx('click');
-      this.drawSeed(y);
-    });
-    this.drawSeed(y);
-    const seedY = y;
-    y += 28;
+    y += 8;
     button(this, 240, y, 160, 20, 'HOW TO PLAY', () => this.toggleHelp(), PAL.purple);
-    txt(this, 320, y + 30, 'ENTER: NEW RUN   H: HELP', 8, PAL.inkDim, [0.5, 0]);
+    y += 26;
+    button(this, 240, y, 160, 20, 'PAINT SHOP', () => this.openGarage(), PAL.orange);
+    txt(this, 320, y + 28, 'ENTER: NEW RUN  H: HELP  G: PAINT', 8, PAL.inkDim, [0.5, 0]);
     pop(this, newBtn.container, 1.1, 300);
-
-    // click outside seed box unfocuses it
-    this.input.on('pointerdown', (_p: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
-      if (this.seedFocus && !over.includes(sz)) {
-        this.seedFocus = false;
-        this.drawSeed(seedY);
-      }
-    });
+    this.drawProgress();
 
     this.input.keyboard?.on('keydown', (e: KeyboardEvent) => {
       if (this.help) {
         this.toggleHelp();
         return;
       }
-      if (this.seedFocus) {
-        if (e.key === 'Backspace') this.seed = this.seed.slice(0, -1);
-        else if (e.key === 'Escape') this.seedFocus = false;
-        else if (e.key === 'Enter') return this.startNew();
-        else if (/^[a-z0-9]$/i.test(e.key) && this.seed.length < 6) {
-          this.seed += e.key.toUpperCase();
-          sfx('hover');
-        }
-        this.drawSeed(seedY);
-        return;
-      }
       if (e.key === 'Enter') this.startNew();
       else if (e.key === 'h' || e.key === 'H') this.toggleHelp();
+      else if (e.key === 'g' || e.key === 'G') this.openGarage();
       else if ((e.key === 'c' || e.key === 'C') && saved) this.continueRun();
     });
 
     this.runAttract();
   }
 
-  private drawSeed(y: number) {
-    const g = this.seedBox;
-    g.clear();
-    drawPanel(g, 240, y, 160, 20, PAL.bgDeep, this.seedFocus ? PAL.yellow : PAL.panelEdge);
-    const shown = this.seed.padEnd(6, '_');
-    this.seedText.setText(this.seed || this.seedFocus ? shown : 'RANDOM');
-    this.seedText.setColor(hex(this.seed ? PAL.yellow : PAL.inkDim));
+  /** Meta progress, kept subtle: best heat unlocked, runs won, furthest endless round. */
+  private drawProgress() {
+    const m = safe(() => game.meta(), null);
+    if (!m) return;
+    const parts: string[] = [];
+    if (m.heatUnlocked > 0) parts.push(`HEAT ${m.heatUnlocked} UNLOCKED`);
+    if (m.runsWon > 0) parts.push(`${m.runsWon} WIN${m.runsWon === 1 ? '' : 'S'}`);
+    if (m.bestEndlessRound > 4) parts.push(`ENDLESS RND ${m.bestEndlessRound}`);
+    if (!parts.length) return;
+    const t = txt(this, 320, 108, parts.join('  -  '), 8, PAL.panelEdge, [0.5, 0]);
+    if (m.heatUnlocked > 0) {
+      const g = this.add.graphics();
+      drawFlame(g, Math.round(t.x - t.width / 2) - 12, 107, heatColor(m.heatUnlocked));
+    }
   }
 
   private startNew() {
     if (this.starting) return;
     this.starting = true;
     sfx('pick');
-    try {
-      game.abandonRun();
-    } catch {
-      /* optional */
-    }
-    game.newRun(this.seed.length ? this.seed : undefined);
-    goToPhase(this, 250);
+    this.cameras.main.fadeOut(200, 11, 10, 20);
+    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('RunSetup'));
+  }
+
+  private openGarage() {
+    if (this.starting) return;
+    this.starting = true;
+    sfx('click');
+    this.cameras.main.fadeOut(150, 11, 10, 20);
+    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Garage', { from: 'Title' }));
   }
 
   private continueRun() {
@@ -210,7 +188,7 @@ export class TitleScene extends Phaser.Scene {
   private runAttract() {
     let i = 0;
     const cars = [
-      () => carVisualFromParts(game.state.parts),
+      () => carVisualFromParts(game.state.parts, loadLook()),
       () => carVisualForOpponent({ car: { body: 'muscle', color: '#3c78e8', accent: '#f4ecd8' }, round: 3, race: 3 }),
       () => carVisualForOpponent({ car: { body: 'wedge', color: '#9b4de0', accent: '#f7d23e' }, round: 4, race: 3 }),
       () => carVisualForOpponent({ car: { body: 'super', color: '#5ad25a', accent: '#0b0a14' }, round: 4, race: 3 }),

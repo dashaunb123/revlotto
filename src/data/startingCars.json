@@ -1,0 +1,7 @@
+[
+  { "id": "daily_driver", "name": "Daily Driver", "body": "compact", "desc": "Balanced. Start with $4 extra cash.", "unlock": { "kind": "free" } },
+  { "id": "big_torque", "name": "Big Torque", "body": "muscle", "desc": "Base power x1.25, base grip x0.9.", "unlock": { "kind": "free" } },
+  { "id": "tow_rig", "name": "Tow Rig", "body": "truck", "desc": "6 passive slots. Base weight +150.", "unlock": { "kind": "beat_round", "value": 2 } },
+  { "id": "paper_plane", "name": "Paper Plane", "body": "wedge", "desc": "Shift window x1.25, weight -150, grip x0.92.", "unlock": { "kind": "win_run" } },
+  { "id": "trust_fund", "name": "Trust Fund", "body": "super", "desc": "Starts with 2 Street parts of one random brand. All shop prices +25%.", "unlock": { "kind": "win_heat", "value": 2 } }
+]

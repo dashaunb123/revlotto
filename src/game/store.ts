@@ -1,7 +1,9 @@
 // Tiny observable store + localStorage persistence for the run.
 import type { RunState } from '../core/types';
 
-export const SAVE_KEY = 'revlotto.run.v1';
+export const SAVE_KEY = 'revlotto.run.v3';
+/** Older save keys: incompatible (v1: no car/heat/bosses; v2: pre-brand part ids), dropped on first read. */
+const OLD_KEYS = ['revlotto.run.v1', 'revlotto.run.v2'];
 
 type Listener = (s: RunState) => void;
 
@@ -50,6 +52,7 @@ export function saveRun(s: RunState): void {
 
 export function readSavedRun(): unknown {
   try {
+    for (const k of OLD_KEYS) storage()?.removeItem(k);
     const raw = storage()?.getItem(SAVE_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {

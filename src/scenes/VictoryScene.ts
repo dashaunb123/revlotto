@@ -2,15 +2,19 @@
 //
 // LAYOUT: title 32px y 16 | RUN STATS panel (20,64)-(310,300) | FINAL BUILD panel (330,64)-(620,300)
 //         build: 12 tiles 32x32 at x 346+38c, y 84+38r (6x2); passives list y 172+11i; car ground y 294
-//         buttons y 314: NEW RUN (184) TITLE (328), 128x24
+//         heat line y 52 | buttons y 312: KEEP RACING (ENDLESS) (120,248w) CASH OUT (384,136w)
 import Phaser from 'phaser';
-import { SLOTS } from '../core/types';
+import { SLOTS, type Tier } from '../core/types';
 import { game } from '../game/game';
-import { goToPhase } from './nav';
+import { goToPhase, runLook } from './nav';
 import { GAME_W, PAL, RARITY_COLOR, TIER_COLOR, hex } from '../render/palette';
-import { burst, button, panel, pop, sfx, shadowTxt, txt } from '../render/ui';
+import { burst, button, heatColor, panel, pop, sfx, shadowTxt, txt, unlockToast } from '../render/ui';
+import { sfx as audio } from '../render/audio';
 import { ensureTextures, slotIcon } from '../render/icons';
 import { carVisualFromParts, makeCar } from '../render/car';
+import { recordRaceOnce } from '../game/cosmetics';
+import { brandInfo, paragonOf } from '../render/shop/factory';
+import { activeParagon } from '../game/brands';
 
 const TITLE = 'STRIP KING!';
 const RAINBOW = [PAL.red, PAL.orange, PAL.yellow, PAL.green, PAL.teal, PAL.blue, PAL.purple, PAL.pink];
@@ -47,20 +51,22 @@ export class VictoryScene extends Phaser.Scene {
     panel(this, 20, 64, 290, 236);
     txt(this, 34, 74, 'RUN STATS', 8, PAL.yellow);
     const wins = hist.filter((r) => r.won).length;
-    const best = hist.length ? Math.min(...hist.map((r) => r.et)) : 0;
+    const ran = hist.filter((r) => !r.skipped && r.et > 0);
+    const best = ran.length ? Math.min(...ran.map((r) => r.et)) : 0;
     const reacts = hist.map((r) => r.reaction).filter((r) => typeof r === 'number' && r > 0);
     const avgReact = reacts.length ? reacts.reduce((a, b) => a + b, 0) / reacts.length : 0;
     const perfects = hist.reduce((n, r) => n + (r.perfectCount ?? 0), 0);
     const cash = hist.reduce((n, r) => n + (r.cashEarned ?? 0), 0);
     const finalRace = hist[hist.length - 1];
+    const meta0 = safe(() => game.meta(), null);
     const rows: [string, string, number][] = [
-      ['RACES WON', `${wins} / ${hist.length || 16}`, PAL.green],
+      ['RACES WON', `${wins} / ${hist.filter((r) => !r.skipped).length || 16}`, PAL.green],
       ['BEST ET', best ? `${best.toFixed(3)}S` : '-', PAL.yellow],
       ['FINAL BOSS ET', finalRace ? `${finalRace.et.toFixed(3)}S` : '-', PAL.ink],
       ['AVG REACTION', avgReact ? `${Math.round(avgReact * 1000)}MS` : '-', PAL.teal],
       ['PERFECT GRADES', String(perfects), PAL.green],
       ['CASH EARNED', `$${cash}`, PAL.yellow],
-      ['CASH LEFT', `$${s.cash}`, PAL.yellow],
+      ['BEST ENDLESS', meta0 && meta0.bestEndlessRound > 4 ? `ROUND ${meta0.bestEndlessRound}` : '-', PAL.teal],
       ['SEED', s.seed, PAL.pink],
     ];
     rows.forEach(([k, v, c], i) => {
@@ -81,10 +87,12 @@ export class VictoryScene extends Phaser.Scene {
     SLOTS.forEach((slot, i) => {
       const ip = s.parts?.[slot];
       if (!ip) return;
-      let tier: 'stock' | 'street' | 'pro' = 'stock';
+      let tier: Tier = 'stock';
+      let brandCol: number | null = null;
       try {
         const d = game.part(ip.partId);
         tier = d.tier;
+        brandCol = d.brand ? brandInfo(d.brand)?.color ?? null : null;
       } catch {
         /* unknown part id */
       }
@@ -94,6 +102,7 @@ export class VictoryScene extends Phaser.Scene {
       g.fillStyle(tier === 'stock' ? PAL.panelEdge : TIER_COLOR[tier], 1).fillRect(x, y, 36, 36);
       g.fillStyle(PAL.bgDeep, 1).fillRect(x + 2, y + 2, 32, 32);
       this.add.image(x + 18, y + 16, slotIcon(slot)).setScale(2).setAlpha(tier === 'stock' ? 0.5 : 1);
+      if (brandCol !== null) g.fillStyle(brandCol, 1).fillRect(x + 2, y + 2, 32, 4);
       for (let p = 0; p < ip.level; p++) g.fillStyle(PAL.yellow, 1).fillRect(x + 6 + p * 9, y + 30, 6, 2);
     });
     txt(this, 344, 166, 'PASSIVES', 8, PAL.inkDim);
@@ -110,15 +119,46 @@ export class VictoryScene extends Phaser.Scene {
       txt(this, 344, 176 + i * 9, `${i + 1}. ${name.toUpperCase()}`.slice(0, 22), 8, col === PAL.inkDim ? PAL.ink : col);
     });
     if (!s.passives?.length) txt(this, 344, 180, 'NONE. RESPECT.', 8, PAL.ink);
+    const pid = safe(() => activeParagon(s.parts), null);
+    if (pid) {
+      // won it with a paragon: name it, loudly
+      const b = brandInfo(pid);
+      const name = (paragonOf(pid)?.name ?? `${b?.name ?? pid} paragon`).toUpperCase();
+      const pt = shadowTxt(this, 528, 236, 'PARAGON', 8, PAL.yellow, [0.5, 0.5]);
+      const nt = shadowTxt(this, 528, 248, name.slice(0, 21), 8, b?.color ?? PAL.yellow, [0.5, 0.5]);
+      for (const t of [pt, nt]) t.setScale(0);
+      this.tweens.add({ targets: [pt, nt], scale: 1, delay: 1400, duration: 300, ease: 'Back.easeOut' });
+      this.tweens.add({ targets: pt, alpha: 0.4, yoyo: true, repeat: -1, duration: 420, delay: 1700 });
+      this.time.delayedCall(1450, () => burst(this, 528, 270, [PAL.yellow, b?.color ?? PAL.ink, PAL.ink], 30, 120, 50));
+    }
     try {
-      const car = makeCar(this, 528, 296, carVisualFromParts(s.parts), 2);
+      const car = makeCar(this, 528, 296, carVisualFromParts(s.parts, runLook()), 2);
       this.tweens.add({ targets: car, y: 295, yoyo: true, repeat: -1, duration: 80 });
       this.time.addEvent({ delay: 1400, loop: true, callback: () => car.flameBurst(240) });
     } catch {
       /* car renderer unavailable */
     }
 
-    const newRun = () => {
+    // heat line: what was won, what it unlocked
+    const meta = safe(() => game.meta(), null);
+    const carName = safe(() => game.startingCars().find((c) => c.id === s.car)?.name ?? '', '');
+    const unlockedNext = !!meta && s.heat < 8 && meta.heatUnlocked > s.heat;
+    const hl = txt(this, 320, 52, `HEAT ${s.heat} BEATEN${carName ? ` WITH ${carName.toUpperCase()}` : ''}${unlockedNext ? `  -  HEAT ${s.heat + 1} UNLOCKED!` : ''}`, 8, heatColor(Math.max(1, s.heat)), [0.5, 0]).setAlpha(0);
+    this.time.delayedCall(700, () => {
+      hl.setAlpha(1);
+      pop(this, hl, 1.3, 260);
+    });
+    if (unlockedNext) this.time.delayedCall(3400, () => unlockToast(this, [`Heat ${s.heat + 1}`], 165, 236, () => audio.unlock()));
+
+    const endless = () => {
+      if (this.going) return;
+      this.going = true;
+      sfx('pick');
+      game.continueEndless();
+      this.cameras.main.flash(150, 255, 255, 255);
+      goToPhase(this, 300);
+    };
+    const cashOut = () => {
       if (this.going) return;
       this.going = true;
       try {
@@ -126,18 +166,34 @@ export class VictoryScene extends Phaser.Scene {
       } catch {
         /* optional */
       }
-      game.newRun();
-      goToPhase(this, 250);
-    };
-    button(this, 184, 314, 128, 24, 'NEW RUN', newRun, PAL.red);
-    button(this, 328, 314, 128, 24, 'TITLE', () => {
-      if (this.going) return;
-      this.going = true;
       this.cameras.main.fadeOut(200, 11, 10, 20);
       this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Title'));
-    }, PAL.panelLight);
-    txt(this, 320, 346, 'ENTER: NEW RUN', 8, PAL.inkDim, [0.5, 0]);
-    this.input.keyboard?.on('keydown-ENTER', newRun);
+    };
+    const kb = button(this, 120, 312, 248, 28, 'KEEP RACING (ENDLESS)', endless, PAL.red);
+    this.tweens.add({ targets: kb.container, scale: { from: 1, to: 1.04 }, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    button(this, 384, 312, 136, 28, 'CASH OUT', cashOut, PAL.green);
+    txt(this, 320, 346, 'ENTER: KEEP RACING   ESC: CASH OUT', 8, PAL.inkDim, [0.5, 0]);
+    this.input.keyboard?.on('keydown-ENTER', endless);
+    this.input.keyboard?.on('keydown-ESC', cashOut);
+
+    // final race counts toward unlocks if the result screen didn't already record it (same key)
+    const last = hist[hist.length - 1];
+    if (last) {
+      let names: string[] = [];
+      try {
+        names = recordRaceOnce(`${s.seed}:${hist.length}:${last.et}`, {
+          won: last.won,
+          round: last.round,
+          boss: last.race === 3,
+          perfects: last.perfectCount ?? 0,
+          margin: last.targetEt - last.et,
+          runWins: wins,
+        });
+      } catch {
+        /* cosmetics are optional */
+      }
+      if (names.length) this.time.delayedCall(1800, () => unlockToast(this, names, 404, 236, () => audio.unlock()));
+    }
 
     // party
     sfx('fanfare');
@@ -182,5 +238,13 @@ export class VictoryScene extends Phaser.Scene {
         burst(this, x, y, [col, PAL.ink, col], 28, 120, 55);
       },
     });
+  }
+}
+
+function safe<T>(fn: () => T, dflt: T): T {
+  try {
+    return fn();
+  } catch {
+    return dflt;
   }
 }

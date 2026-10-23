@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Revlotto Cutscene SFX</title>
+<link rel="icon" href="data:," />
+<style>
+  body { margin: 0; background: #0b0a14; color: #f4ecd8; font: 15px/1.5 ui-monospace, Consolas, monospace; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 24px 16px; }
+  h1 { color: #f7d23e; text-shadow: 3px 3px 0 #e8413c; font-size: 26px; margin: 0 0 6px; }
+  h2 { color: #f7d23e; font-size: 16px; margin: 22px 0 8px; }
+  p { color: #9a8fb8; margin: 0 0 18px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  button { font: inherit; background: #1c1830; color: inherit; border: 2px solid #4a3f78; box-shadow: 4px 4px 0 #000; padding: 12px; cursor: pointer; }
+  button:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+  button.on { border-color: #5ad25a; color: #5ad25a; }
+  .row { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; align-items: center; }
+  #lvl { color: #9a8fb8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>CUTSCENE SFX</h1>
+  <p>Every cutscene sound, every boss, every mood. Voices and taunts are randomised a little each time. "Play boss music" starts the final boss track muffled, the way the cutscene hears it; click again to open it up (M mutes everything).</p>
+  <h2>Shared</h2>
+  <div class="grid" id="shared"></div>
+  <h2>Heel turn (v3)</h2>
+  <div class="grid" id="turn"></div>
+  <h2>Polish one-shots</h2>
+  <div class="grid" id="polish"></div>
+  <div id="bosses"></div>
+  <div class="row"><button id="music">Play boss music</button><button id="mute">Mute (M)</button><button id="measure">Measure all (offline)</button></div>
+  <pre id="lvl"></pre>
+</div>
+<script type="module" src="./sfx.ts"></script>
+</body>
+</html>

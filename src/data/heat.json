@@ -1,0 +1,11 @@
+[
+  { "level": 0, "name": "Cold Start", "desc": "The standard run." },
+  { "level": 1, "name": "Heat 1", "desc": "Regular race wins pay $1 less." },
+  { "level": 2, "name": "Heat 2", "desc": "Opponent target times are 2% faster." },
+  { "level": 3, "name": "Heat 3", "desc": "Rerolls and packs cost $1 more." },
+  { "level": 4, "name": "Heat 4", "desc": "No time bonus on boss races." },
+  { "level": 5, "name": "Heat 5", "desc": "Start with $5 less." },
+  { "level": 6, "name": "Heat 6", "desc": "Targets are another 2% faster." },
+  { "level": 7, "name": "Heat 7", "desc": "Mulligan never appears." },
+  { "level": 8, "name": "Heat 8", "desc": "Bosses get a second random modifier." }
+]

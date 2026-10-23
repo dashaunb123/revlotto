@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Revlotto Dyno</title>
+<style>
+  body { margin: 0; background: #0b0a14; color: #f4ecd8; font: 15px/1.5 ui-monospace, Consolas, monospace; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 24px 16px; }
+  h1 { color: #f7d23e; text-shadow: 3px 3px 0 #e8413c; font-size: 26px; margin: 0 0 6px; }
+  h2 { color: #9a8fb8; font-size: 13px; letter-spacing: 0.1em; margin: 22px 0 8px; font-weight: normal; }
+  p { color: #9a8fb8; margin: 0 0 18px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  button { font: inherit; background: #1c1830; color: inherit; border: 2px solid #4a3f78; box-shadow: 4px 4px 0 #000; padding: 12px; cursor: pointer; }
+  button.on { border-color: #5ad25a; color: #5ad25a; }
+  .row { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  .tach { margin-top: 22px; border: 2px solid #4a3f78; box-shadow: 4px 4px 0 #000; padding: 12px; }
+  .bar { height: 14px; background: #1c1830; margin-top: 8px; }
+  .bar i { display: block; height: 100%; width: 0; background: #f7d23e; }
+  .bar i.red { background: #e8413c; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>DYNO</h1>
+  <p>Pick an engine, then idle, rev or do a full race pull. Changing parts while it runs restarts the engine with the new parts. Listen on headphones or real speakers: most of the big-block lives under 150 Hz.</p>
+  <h2>ENGINE</h2>
+  <div class="grid" id="engine"></div>
+  <h2>PARAGON VOICES (all 12 parts of a brand)</h2>
+  <div class="grid" id="paragons"></div>
+  <h2>PARAGON TRANSFORM SOUND (sfx.paragon)</h2>
+  <div class="grid" id="transform"></div>
+  <h2>BOLT-ONS (click to cycle stock / street / sport / pro)</h2>
+  <div class="grid" id="parts"></div>
+  <h2>RUN</h2>
+  <div class="grid" id="runs"></div>
+  <div class="tach"><span id="read">stopped</span><div class="bar"><i id="needle"></i></div></div>
+  <div class="row"><button id="stop">Stop</button><button id="mute">Mute (M)</button></div>
+</div>
+<script type="module" src="./engines.ts"></script>
+</body>
+</html>

@@ -15,10 +15,12 @@
   "dependencies": {
     "@fontsource/press-start-2p": "^5.2.5",
     "phaser": "^3.90.0",
+    "three": "^0.169.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^22.15.30",
+    "@types/three": "^0.169.0",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3",
     "vite": "^6.3.5"

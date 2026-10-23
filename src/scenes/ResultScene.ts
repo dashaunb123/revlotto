@@ -2,11 +2,13 @@
 import Phaser from 'phaser';
 import type { GradeEvent } from '../core/types';
 import { game } from '../game/game';
-import { sfx, toggleMute, unlockAudio } from '../render/audio';
+import { sfx, unlockAudio } from '../render/audio';
+import { recordRaceOnce } from '../game/cosmetics';
 import { fxText, popup, stamp } from '../render/fx';
 import { GAME_H, GAME_W, GRADE_COLOR, PAL, hex } from '../render/palette';
-import { hitBox, panel, txt } from '../render/ui';
+import { heatBadge, hitBox, panel, roundLabel, txt, unlockToast } from '../render/ui';
 import { goToPhase } from './nav';
+import { brandInfo, brandLogo, paragonOf } from '../render/shop/factory';
 
 function gradeName(e: GradeEvent): string {
   switch (e.kind) {
@@ -51,6 +53,14 @@ export class ResultScene extends Phaser.Scene {
     }
     const won = r.won;
     const opName = (s.history[s.history.length - 1]?.opponent ?? game.currentOpponent().name).toUpperCase();
+
+    // ---- header: round + heat ----
+    const rec = s.history[s.history.length - 1];
+    const rRound = rec?.round ?? s.round;
+    const rRace = rec?.race ?? s.race;
+    const hdr = txt(this, 12, 8, `${roundLabel(rRound)} - ${rRace === 3 ? 'BOSS' : `RACE ${rRace + 1}/4`}`, 8, rRound > 4 ? PAL.teal : PAL.inkDim);
+    if (s.heat > 0) heatBadge(this, hdr.x + hdr.width + 10, 12, s.heat);
+    this.paragonBadge();
 
     // ---- banner ----
     const banner = stamp(this, null, 320, 36, won ? 'YOU WIN!' : 'DEFEATED', won ? PAL.green : PAL.red, 32, 100);
@@ -117,12 +127,55 @@ export class ResultScene extends Phaser.Scene {
     else this.runOver(afterSlip, opName);
 
     this.makeContinue(won);
+    this.recordUnlocks(afterSlip + 500);
 
     const kb = this.input.keyboard!;
     kb.addCapture('SPACE');
     kb.on('keydown-SPACE', () => this.next());
     kb.on('keydown-ENTER', () => this.next());
-    kb.on('keydown-M', () => toggleMute());
+  }
+
+  /** Top-right: the paragon you raced with (name + signature ability colour chip). */
+  private paragonBadge() {
+    let pid: string | null = null;
+    try {
+      pid = game.activeParagon();
+    } catch {
+      pid = null;
+    }
+    if (!pid) return;
+    const b = brandInfo(pid);
+    const name = (paragonOf(pid)?.name ?? b?.name ?? pid).toUpperCase().slice(0, 22);
+    const w = name.length * 8 + 22;
+    const x = GAME_W - 12 - w;
+    const g = this.add.graphics();
+    g.fillStyle(PAL.bgDeep, 1).fillRect(x + 2, 6, w, 14);
+    g.fillStyle(b?.color ?? PAL.yellow, 1).fillRect(x, 4, w, 14);
+    g.fillStyle(0xffffff, 0.3).fillRect(x, 4, w, 1);
+    brandLogo(this, x + 8, 11, pid, 10);
+    txt(this, x + 16, 11, name, 8, b?.ink ?? PAL.ink, [0, 0.5]);
+  }
+
+  /** Count this race toward cosmetic unlocks (once per race, even if the scene re-enters) and toast them. */
+  private recordUnlocks(showAt: number) {
+    const s = game.state;
+    const r = s.lastResult!;
+    const rec = s.history[s.history.length - 1];
+    let names: string[] = [];
+    try {
+      names = recordRaceOnce(`${s.seed}:${s.history.length}:${rec?.et ?? r.et}`, {
+        won: r.won,
+        round: rec?.round ?? s.round,
+        boss: (rec?.race ?? s.race) === 3,
+        perfects: r.perfectCount,
+        margin: r.margin,
+        runWins: s.history.filter((h) => h.won).length,
+      });
+    } catch {
+      /* cosmetics are optional */
+    }
+    // sits between the continue hint and the button; not queued, so skipping doesn't stack them
+    if (names.length) this.time.delayedCall(showAt, () => unlockToast(this, names, 352, 332, () => sfx.unlock()));
   }
 
   private at(ms: number, fn: () => void) {
@@ -203,7 +256,16 @@ export class ResultScene extends Phaser.Scene {
       txt(this, 478, 186, `LOST BY ${Math.abs(r.margin).toFixed(3)} S`, 8, PAL.ink, [0.5, 0]);
       txt(this, 478, 202, `TO ${opName.slice(0, 28)}`, 8, PAL.inkDim, [0.5, 0]);
       txt(this, 478, 230, `RACES WON  ${wins}`, 8, PAL.ink, [0.5, 0]);
-      txt(this, 478, 246, `ROUND ${s.round}  RACE ${s.race + 1}/4`, 8, PAL.inkDim, [0.5, 0]);
+      txt(this, 478, 246, `${roundLabel(s.round)}  ${s.race === 3 ? 'BOSS' : `RACE ${s.race + 1}/4`}`, 8, PAL.inkDim, [0.5, 0]);
+      if (s.round > 4) {
+        let best = 0;
+        try {
+          best = game.meta().bestEndlessRound;
+        } catch {
+          /* meta optional */
+        }
+        txt(this, 478, 262, s.newEndlessRecord ? 'NEW ENDLESS RECORD!' : `RECORD: ROUND ${best}`, 8, PAL.teal, [0.5, 0]);
+      }
       // red vignette pulse
       const v = this.add.rectangle(0, 0, GAME_W, GAME_H, PAL.red, 0).setOrigin(0, 0);
       this.tweens.add({ targets: v, fillAlpha: 0.12, duration: 700, yoyo: true, repeat: -1 });

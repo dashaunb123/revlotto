@@ -1,5 +1,9 @@
 // DEV ONLY (not imported by the game): headless screenshot harness for the race scenes.
 // /src/render/race/dev/preview.html?s=race|staging|result|cars&stop=ms&bot=perfect|average|sloppy&lose=1
+// Race extras: rich=1 (pro parts incl. nitrous + turbo), power=N / grip=N (override stats),
+// win=1 (target ET you can't miss), pre=s / t=s freeze at a burnout time / sim time
+// boss=<modifier id>[&seed=N] races a boss with that modifier (params rolled from seed; boss look from
+// bosses.json via &bossid=, else the first boss using the modifier); target=ET overrides the target.
 import Phaser from 'phaser';
 import '@fontsource/press-start-2p';
 import { game } from '../../../game/game';
@@ -8,6 +12,9 @@ import { StagingScene } from '../../../scenes/StagingScene';
 import { ResultScene } from '../../../scenes/ResultScene';
 import { RaceSim } from '../../../sim/RaceSim';
 import { makeBot } from '../../../sim/bots';
+import { rollBossParams } from '../../../sim/bossMods';
+import { Rng } from '../../../core/rng';
+import { CONTENT } from '../../../data/content';
 import { makeCar } from '../../car';
 import type { BodyType, CarVisual } from '../../car';
 
@@ -44,7 +51,7 @@ async function boot() {
   if (q.get('rich')) {
     // give the car some parts for visuals
     const s = game.state as any;
-    for (const slot of ['tires', 'aero', 'exhaust', 'forced_induction', 'nitrous', 'intake']) {
+    for (const slot of ['tires', 'aero', 'exhaust', 'forced_induction', 'nitrous', 'intake', 'suspension', 'engine']) {
       const id = (await import('../../../data/content')).CONTENT.parts.find((p: any) => p.slot === slot && p.tier === 'pro')?.id;
       if (id) s.parts[slot] = { partId: id, level: 0 };
     }
@@ -54,7 +61,18 @@ async function boot() {
   let data: object = {};
   if (which === 'race') {
     start = 'Race';
-    data = { setup: game.startRace(), autopilot: makeBot(bot, 7) };
+    const setup = game.startRace();
+    if (q.get('power')) setup.stats.power = Number(q.get('power'));
+    if (q.get('grip')) setup.stats.grip = Number(q.get('grip'));
+    if (q.get('win')) setup.targetEt = 30;
+    const mod = q.get('boss');
+    if (mod) {
+      const bid = q.get('bossid') ?? CONTENT.bosses.find((b) => b.modifier === mod)?.id ?? mod;
+      setup.boss = { id: bid, modifier: mod, params: rollBossParams(mod, new Rng(Number(q.get('seed') ?? 1))) };
+      if (!q.get('win')) setup.targetEt = 13.5;
+    }
+    if (q.get('target')) setup.targetEt = Number(q.get('target'));
+    data = { setup, autopilot: makeBot(bot, Number(q.get('botseed') ?? 7)) };
   } else if (which === 'result') {
     const setup = game.startRace();
     if (q.get('lose')) setup.targetEt = 5;
@@ -80,6 +98,21 @@ async function boot() {
   g.scene.add('Result', ResultScene);
   g.scene.add('Cars', CarsScene);
   g.scene.start(start, data);
-  if (stop > 0) setTimeout(() => g.loop.sleep(), stop);
+  (window as unknown as { __booted: boolean; __PHASER: Phaser.Game }).__booted = true;
+  (window as unknown as { __PHASER: Phaser.Game }).__PHASER = g;
+  // stop=ms freezes after that much game time (summed frame deltas), so shots land on the same moment
+  let played = 0;
+  if (stop > 0) g.events.on('poststep', (_t: number, d: number) => (played += Math.min(d, 100)) >= stop && g.loop.sleep());
+  // pre=s freezes the race at that preroll (burnout) time, t=s at that sim time (0 = green)
+  const pre = q.get('pre'),
+    simT = q.get('t');
+  if (pre || simT)
+    g.events.on('poststep', () => {
+      const r = g.scene.getScene('Race') as unknown as { prerollT: number; phase: string; sim?: RaceSim };
+      if (!r?.sim) return;
+      if (pre && r.prerollT >= Number(pre)) g.loop.sleep();
+      if (simT && r.phase !== 'preroll' && r.sim.state.t >= Number(simT)) g.loop.sleep();
+    });
+  setInterval(() => ((window as unknown as { __fps: number }).__fps = Math.round(g.loop.actualFps)), 250);
 }
 boot();

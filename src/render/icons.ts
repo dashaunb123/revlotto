@@ -7,12 +7,17 @@
 //   pas_<id>               12x12  passive icons (falls back to pas_generic)
 //   con_<id>               12x12  consumable icons (falls back to con_generic)
 //   tuning                 12x12  tuning card icon
+//   tag_<id>               12x12  skip-race tags (tagIcon(); falls back to tag_generic)
+//   gar_<id>               12x12  garage upgrades (garageIcon(); tier 2 = gold frame)
+//   brand_<brandId>        12x12  brand logo badges in the brand colours (brandIcon(); parodies only)
+//   tier_<tier>             8x8   tier chevrons: stock dash, street 1, sport 2, pro 3 (tierIcon())
 //   coin                    8x8
 //   pack_parts / pack_power 52x76 booster pack art
 //   px                      1x1 white pixel (particles / confetti)
 import Phaser from 'phaser';
 import { PAL } from './palette';
-import type { SlotId } from '../core/types';
+import type { SlotId, Tier } from '../core/types';
+import { brandById } from '../game/brands';
 
 const C: Record<string, number> = {
   k: PAL.bgDeep,
@@ -218,6 +223,34 @@ const STAT_MAPS: Record<string, string[]> = {
 };
 
 const PASSIVE_MAPS: Record<string, string[]> = {
+  brand_loyalist: [
+    '.yyyyyyyyyy.',
+    'ykkkkkkkkkky',
+    'ykkkkyykkkky',
+    'ykkkkyykkkky',
+    'ykyyyyyyyyky',
+    'ykkyyyyyykky',
+    'ykkkyyyykkky',
+    'ykkyykkyykky',
+    '.ykykkkkyky.',
+    '..ykkkkkky..',
+    '...ykkkky...',
+    '....yyyy....',
+  ],
+  mixed_bag: [
+    '....nnnn....',
+    '.....nn.....',
+    '...NNNNNN...',
+    '..NrrNNbbN..',
+    '.NNrrNNbbNN.',
+    '.NNNNNNNNNN.',
+    '.NNggNNyyNN.',
+    '.NNggNNyyNN.',
+    '.NNNNNNNNNN.',
+    '..NNNNNNNN..',
+    '...nnnnnn...',
+    '............',
+  ],
   clean_launcher: [
     '...kkkkkk...',
     '..kkddddkk..',
@@ -358,6 +391,658 @@ const PASSIVE_MAPS: Record<string, string[]> = {
     's...........',
     'ss..........',
   ],
+  // ---------- Perfect-shift streak ----------
+  hot_streak: [
+    '.....r......',
+    '....rr......',
+    '....rro.....',
+    '...rroo..r..',
+    '...roooo.rr.',
+    '..rrooyoorr.',
+    '..roooyyoor.',
+    '.rrooyyyoor.',
+    '.rooyywyyor.',
+    '.rooywwwyor.',
+    '..rooyyyor..',
+    '...rrrrrr...',
+  ],
+  perfectionist: [
+    '............',
+    '...BBBBBB...',
+    '..BwwBBBBB..',
+    '.BwBBBBBBBB.',
+    'bbbbbbbbbbbb',
+    '.bBbBBBbBbb.',
+    '..bBbBBbBb..',
+    '...bBbbBb...',
+    '....bBBb....',
+    '.....bb.....',
+    '............',
+    '............',
+  ],
+  rev_matcher: [
+    '....gggg....',
+    '..gg....gg..',
+    '.g........g.',
+    '.g..w.....g.',
+    'g....w....yg',
+    'g.....w..y.g',
+    'g.....kkk..g',
+    '......kwk...',
+    '......kkk...',
+    '............',
+    '..SSSSSSSS..',
+    '............',
+  ],
+  tightrope: [
+    '............',
+    '.....ww.....',
+    '.....ww.....',
+    '....wwww....',
+    '...w.ww.w...',
+    '.....ww.....',
+    '....w..w....',
+    'nNnNnNnNnNnN',
+    '............',
+    '.s........s.',
+    '.s........s.',
+    'sss......sss',
+  ],
+  second_wind: [
+    '............',
+    '.TTTTTTT....',
+    '........T...',
+    '.TTTT...T...',
+    '.....T.T....',
+    '..TTT.......',
+    '............',
+    '.tttttttttt.',
+    '...........t',
+    '.ttttttt..t.',
+    '........tt..',
+    '............',
+  ],
+  shift_light: [
+    '............',
+    '.kkkkkkkkkk.',
+    '.kggkyykrrk.',
+    '.kggkyykrrk.',
+    '.kkkkkkkkkk.',
+    '.....ss.....',
+    '.....ss.....',
+    '............',
+    '...w.ww.w...',
+    '....w..w....',
+    '..w......w..',
+    '............',
+  ],
+  perfect_record: [
+    '...kkkkkk...',
+    '..kssssssk..',
+    '.ksskkkkssk.',
+    'kssksssskssk',
+    'ksksyyyysksk',
+    'ksksywwysksk',
+    'ksksyyyysksk',
+    'kssksssskssk',
+    '.ksskkkkssk.',
+    '..kssssssk..',
+    '...kkkkkk...',
+    '............',
+  ],
+  all_or_nothing: [
+    '...wwwwww...',
+    '..wwwwwwww..',
+    '.wwwwwwwwww.',
+    '.wkkwwwwkkw.',
+    '.wkkwwwwkkw.',
+    '.wwwwkkwwww.',
+    '..wwwwwwww..',
+    '...wkwkwk...',
+    '...wwwwww...',
+    '............',
+    '.rrr....rrr.',
+    '..rrr..rrr..',
+  ],
+  // ---------- Launch ----------
+  quick_draw: [
+    '.....kk.....',
+    '....kook....',
+    '....kyyk....',
+    '....kook....',
+    '....kyyk....',
+    '....kook....',
+    '....kggk....',
+    '....kgwk....',
+    '....kkkk....',
+    '.....ss.....',
+    '.....ss.....',
+    '....ssss....',
+  ],
+  holeshot: [
+    '............',
+    '..kkkkk.....',
+    '.kkssskk..g.',
+    'kksdddskk.gg',
+    'kssdkdsskggg',
+    'kssdkdsskggg',
+    'kksdddskk.gg',
+    '.kkssskk..g.',
+    '..kkkkk.....',
+    'pppppppppppp',
+    '............',
+    '............',
+  ],
+  burnout_box: [
+    '..SS..SS....',
+    '.SSSSSSSS...',
+    'SSSSSSSSSS..',
+    '.SSSSSSSSSSS',
+    '...SSSSSSSS.',
+    '............',
+    '...kkkkkk...',
+    '..kkddddkk..',
+    '..kdkkkkdk..',
+    '..kkddddkk..',
+    '...kkkkkk...',
+    'oooooooooooo',
+  ],
+  torque_monster: [
+    '............',
+    '....rrr.....',
+    '...rrrr.....',
+    '..rr.rr.....',
+    '.....rr..yy.',
+    '.....rr.yy..',
+    '.....rr.yyyy',
+    '.....rr...yy',
+    '.....rr..yy.',
+    '...rrrrrryy.',
+    '...rrrrrr...',
+    '............',
+  ],
+  slingshot: [
+    '.n........n.',
+    '.nn......nn.',
+    '..nP....Pn..',
+    '..n.P..P.n..',
+    '..n..PP..n..',
+    '..n..ww..n..',
+    '..nn.ww.nn..',
+    '...nnnnnn...',
+    '.....nn.....',
+    '.....nn.....',
+    '.....nn.....',
+    '.....NN.....',
+  ],
+  // ---------- Nitro ----------
+  hot_mix: [
+    '....SSSS....',
+    '.....ss.....',
+    '.....ss.....',
+    '....s..s....',
+    '...s....s...',
+    '..sppppppS..',
+    '..spPpPppS..',
+    '.sppppPpppS.',
+    '.spPpppppPS.',
+    '.sppppppppS.',
+    '..ssssssss..',
+    '............',
+  ],
+  wet_shot: [
+    '.....b......',
+    '....bb......',
+    '...bBbb.....',
+    '...bBbb..b..',
+    '....bb..bb..',
+    '.......bBbb.',
+    '.......bBbb.',
+    '..b.....bb..',
+    '.bb.........',
+    'bBbb........',
+    'bBbb........',
+    '.bb.........',
+  ],
+  spooled_up: [
+    '............',
+    '...oooooo...',
+    '..oyyyyyyo..',
+    '.oyoooooyo..',
+    '.oyoyyyoyo..',
+    '.oyoyoyoyo..',
+    '.oyoyyoyo...',
+    '.oyoooyo..pp',
+    '.oyyyyyo..pP',
+    '..ooooo...pp',
+    '..........pp',
+    '............',
+  ],
+  natural_aspiration: [
+    '..........g.',
+    '........ggg.',
+    '......gggtg.',
+    '.....ggggtg.',
+    '....ggggtgg.',
+    '...ggggtggg.',
+    '...gggtgggg.',
+    '...ggtgggg..',
+    '...gtgggg...',
+    '...tggg.....',
+    '..t.........',
+    '.t..........',
+  ],
+  late_spray: [
+    '............',
+    '.pppp.......',
+    '....pp......',
+    '..ppp...T.T.',
+    '....pp.T.T..',
+    '.pppp.TTTTT.',
+    '.......T.T..',
+    'ssss....T.T.',
+    'sSSsss......',
+    'ssss........',
+    '............',
+    '............',
+  ],
+  blow_off_valve: [
+    '.....S..S...',
+    '....S..S..S.',
+    '.....S..S...',
+    '............',
+    '....ssss....',
+    '...sSSSSs...',
+    '...ssssss...',
+    '....soos....',
+    '....soos....',
+    '..ssssssss..',
+    '..sSSSSSSs..',
+    '..ssssssss..',
+  ],
+  // ---------- Economy ----------
+  nest_egg: [
+    '............',
+    '....yyyy....',
+    '...yyyyyy...',
+    '..yywyyyyy..',
+    '..ywyyyyyy..',
+    '..yyyyyyyy..',
+    '..yyyyyyyo..',
+    '.nNnNnNnNnN.',
+    'nNnnNnnNnnNn',
+    '.nnNnnNnnNn.',
+    '..nnnnnnnn..',
+    '............',
+  ],
+  piggy_bank: [
+    '............',
+    '.....kk.....',
+    '..PPPPPPPP..',
+    '.PPPPPPPPPP.',
+    '.PkPPPPPPPPP',
+    'PPPPPPPPPPPP',
+    'PPPPPPPPPPP.',
+    '.PPPPPPPPPP.',
+    '..PP....PP..',
+    '..PP....PP..',
+    '...........y',
+    '..........yo',
+  ],
+  sponsor_decal: [
+    '............',
+    '.wwwwwwwwww.',
+    '.wrrrrrrrrw.',
+    '.wrrrwwrrrw.',
+    '.wrrwwwwrrw.',
+    '.wrwwwwwwrw.',
+    '.wrrwwwwrrw.',
+    '.wrrwrrwrrw.',
+    '.wrrrrrrrrw.',
+    '.wwwwwwwwww.',
+    '............',
+    '............',
+  ],
+  bargain_hunter: [
+    '.......yyyy.',
+    '......yooooy',
+    '.....yoookoy',
+    '....yooooooy',
+    '...yoooooooy',
+    '..yoooooooy.',
+    '.yoooooooy..',
+    'yoooooooy...',
+    '.yooooooy...',
+    '..yooooy....',
+    '...yyyy.....',
+    '............',
+  ],
+  day_off: [
+    '.......wwww.',
+    '.........w..',
+    '........w...',
+    '.......wwww.',
+    '..www.......',
+    '...w........',
+    '..www.......',
+    '............',
+    '.nnnnnnnnnn.',
+    '.nBBBBBBBBn.',
+    '.nnnnnnnnnn.',
+    '.n........n.',
+  ],
+  scrap_dealer: [
+    '............',
+    '.......yyy..',
+    '......yoooy.',
+    '......yoyoy.',
+    '......yoooy.',
+    '.......yyy..',
+    '....s.......',
+    '...sSs..S...',
+    '..sSssSsSs..',
+    '.sSsSsssSSs.',
+    'ssssssssssss',
+    '............',
+  ],
+  prize_fighter: [
+    '............',
+    '...rrrrr....',
+    '..rrrrrrr...',
+    '.rrwrrrrrr..',
+    '.rrrrrrrrrr.',
+    '.rrrrrrrrrr.',
+    '.rrrrrrrrr..',
+    '..rrrrrrr...',
+    '...wwwww....',
+    '...wwwww....',
+    '...ddddd....',
+    '............',
+  ],
+  golden_wrench: [
+    '.........yy.',
+    '........y..y',
+    '........y...',
+    '.......yyy.y',
+    '......yyy.y.',
+    '.....yyy....',
+    '....yyy.....',
+    '...yyy......',
+    '..yyy.......',
+    'y.yy........',
+    'yyy.........',
+    '.y..........',
+  ],
+  // ---------- Scaling ----------
+  momentum: [
+    '............',
+    '............',
+    '.oo..oo..oo.',
+    '..oo..oo..oo',
+    '...oo..oo..o',
+    '....oo..oo..',
+    '...oo..oo..o',
+    '..oo..oo..oo',
+    '.oo..oo..oo.',
+    '............',
+    '............',
+    '............',
+  ],
+  trophy_case: [
+    '............',
+    '.yyyyyyyyyy.',
+    'y.yyyyyyyy.y',
+    'y.yywyyyyy.y',
+    '.yyywyyyyyy.',
+    '...yyyyyy...',
+    '....yyyy....',
+    '.....yy.....',
+    '.....yy.....',
+    '....oooo....',
+    '...oooooo...',
+    '...nnnnnn...',
+  ],
+  patience: [
+    '..nnnnnnnn..',
+    '...SSSSSS...',
+    '...SyyyyS...',
+    '....SyyS....',
+    '.....Sy.....',
+    '.....yS.....',
+    '....S.yS....',
+    '...S..y.S...',
+    '...SyyyyS...',
+    '...SSSSSS...',
+    '..nnnnnnnn..',
+    '............',
+  ],
+  recycler: [
+    '....gggg....',
+    '...gg..gg...',
+    '..gg....g...',
+    '..g.....ggg.',
+    '.ggg.....g..',
+    '..g.........',
+    '.........g..',
+    '..g.....ggg.',
+    '.ggg.....g..',
+    '...g....gg..',
+    '...gg..gg...',
+    '....gggg....',
+  ],
+  old_money: [
+    '....nnnn....',
+    '.....nn.....',
+    '....nNNn....',
+    '...nNNNNn...',
+    '..nNNyNNNn..',
+    '.nNNyyyNNNn.',
+    '.nNNyNNNNNn.',
+    '.nNNNyyNNNn.',
+    '.nNNNNNyNNn.',
+    '.nNNyyyNNNn.',
+    '..nNNyNNNn..',
+    '...nnnnnn...',
+  ],
+  broken_in: [
+    '....kkkk....',
+    '...kSSSSk...',
+    '..kSwwSdSk..',
+    '..kSwSSSSk..',
+    '..kSSdSSdk..',
+    '...kSSSSk...',
+    '....kssk....',
+    '.....ss.....',
+    '.....ss.....',
+    '.....ss.....',
+    '...nnnnnn...',
+    '..nnnnnnnn..',
+  ],
+  // ---------- Position ----------
+  mirror: [
+    '............',
+    '.....ss.....',
+    '.....ss.....',
+    '.kkkkkkkkkk.',
+    'kSBBBBBBBBSk',
+    'kSBwBBBBBBSk',
+    'kSBBwBBBBBSk',
+    'kSBBBBBBBBSk',
+    '.kkkkkkkkkk.',
+    '.......t....',
+    '.tttttttt...',
+    '.......t....',
+  ],
+  tow_hook: [
+    '..t.ss......',
+    '.tt.ss......',
+    'tttttt......',
+    '.tt.ss......',
+    '..t.ss......',
+    '....ss...ss.',
+    '....ss...ss.',
+    '....ss...ss.',
+    '....sss.sss.',
+    '.....sssss..',
+    '......sss...',
+    '............',
+  ],
+  pole_position: [
+    's...........',
+    'sgggggggg...',
+    'sggggwgggg..',
+    'sgggwwgggg..',
+    'sggggwgggg..',
+    'sggggwgggg..',
+    'sgggwwwggg..',
+    'sgggggggg...',
+    's...........',
+    's...........',
+    's...........',
+    'ss..........',
+  ],
+  convoy: [
+    '............',
+    '............',
+    '............',
+    '.bb..rr..yy.',
+    'bbbbrrrryyyy',
+    'bBbbrPrryoyy',
+    '.k.k.k.k.k.k',
+    '............',
+    '.d.....t....',
+    '.dd....tt...',
+    '.ddd...ttt..',
+    '............',
+  ],
+  // ---------- Weird / risky ----------
+  coin_flip: [
+    '...yyyyyy...',
+    '..yyooooyy..',
+    '.yyoyyyyoyy.',
+    '.yoyyooyyoy.',
+    '.yoyoyyoyoy.',
+    '.yoyyyyoyoy.',
+    '.yoyyyoyyoy.',
+    '.yoyyoyyyoy.',
+    '.yyoyyyyoyy.',
+    '..yyoyyoyy..',
+    '...yyyyyy...',
+    '............',
+  ],
+  wild_card: [
+    '..kkkkkkkk..',
+    '..kwwwwwwk..',
+    '..kwrwwwwk..',
+    '..kwwwwwwk..',
+    '..kwwPPwwk..',
+    '..kwPPPPwk..',
+    '..kwwPPwwk..',
+    '..kwwwwwwk..',
+    '..kwwwwrwk..',
+    '..kwwwwwwk..',
+    '..kkkkkkkk..',
+    '............',
+  ],
+  overclock: [
+    '..s.s.s.s...',
+    '.kkkkkkkkk..',
+    'skrrrrrrrks.',
+    '.krryyrrrk..',
+    'skrryyrrrks.',
+    '.krrrryyrk..',
+    'skrrryyrrks.',
+    '.krrrrryrk..',
+    'skrrrrrrrks.',
+    '.kkkkkkkkk..',
+    '..s.s.s.s...',
+    '............',
+  ],
+  sandbagger: [
+    '............',
+    '....n..n....',
+    '.....nn.....',
+    '...NNNNNN...',
+    '..NNNNNNNN..',
+    '.NNnNNNNNNN.',
+    '.NNNNNNNnNN.',
+    '.NNNNNNNNNN.',
+    '.NNNNnNNNNN.',
+    '..NNNNNNNN..',
+    '...nnnnnn...',
+    '............',
+  ],
+  // ---------- New systems ----------
+  boss_hunter: [
+    '.....rr.....',
+    '...rrrrrr...',
+    '..rr.rr.rr..',
+    '.r...rr...r.',
+    '.r........r.',
+    'rrrr.ww.rrrr',
+    'rrrr.ww.rrrr',
+    '.r........r.',
+    '.r...rr...r.',
+    '..rr.rr.rr..',
+    '...rrrrrr...',
+    '.....rr.....',
+  ],
+  home_garage: [
+    '.....rr.....',
+    '....rrrr....',
+    '...rrrrrr...',
+    '..rrrrrrrr..',
+    '.rrrrrrrrrr.',
+    '..ssssssss..',
+    '..sSSSSSSs..',
+    '..skkkkkks..',
+    '..sSSSSSSs..',
+    '..skkkkkks..',
+    '..sSSSSSSs..',
+    '..ssssssss..',
+  ],
+  heat_seeker: [
+    '.....ss.....',
+    '....sSSs....',
+    '....sSSs.o..',
+    '....sSrs....',
+    '....sSrs.o..',
+    '....sSrs....',
+    '....sSrs.o..',
+    '....srrs....',
+    '...srrrrs...',
+    '...srrrrs...',
+    '....ssss....',
+    '............',
+  ],
+  ballast: [
+    '............',
+    '............',
+    '.ssssssssss.',
+    'sSSSSSSSSSSs',
+    '.sssssssss..',
+    '...sssss....',
+    '...sssss....',
+    '..sssssss...',
+    '.sssssssss..',
+    '.kkkkkkkkk..',
+    '............',
+    '............',
+  ],
+  tag_along: [
+    '............',
+    '....s.......',
+    '...s.s......',
+    '..s...s.....',
+    '.kkkkkkkkk..',
+    '.kyyyyyyyk..',
+    '.kyokkkoyk..',
+    '.kyyyyyyyk..',
+    '.kyokkoyyk..',
+    '.kyyyyyyyk..',
+    '.kkkkkkkkk..',
+    '............',
+  ],
   generic: [
     '............',
     '...yyyyyy...',
@@ -433,6 +1118,114 @@ const CONSUMABLE_MAPS: Record<string, string[]> = {
     '............',
   ],
 };
+
+// ---------- Tags and garage upgrades: a frame plus a 6x6 glyph ----------
+
+const GLYPH: Record<string, string[]> = {
+  gear: ['.S..S.', 'SSSSSS', 'SS..SS', 'SS..SS', 'SSSSSS', '.S..S.'],
+  bolt: ['...yy.', '..yy..', '.yyyy.', '..yy..', '.yy...', 'yy....'],
+  x2: ['......', 'w.w.ww', '.w...w', 'w.w.w.', '....ww', '......'],
+  star: ['..pp..', 'pppppp', '.pppp.', '.pppp.', 'pp..pp', '......'],
+  wrench: ['S...S.', 'SS.SS.', '.SSS..', '..SS..', '...SS.', '....SS'],
+  arrows: ['.gggg.', 'g....g', 'g..ggg', 'ggg..g', 'g....g', '.gggg.'],
+  up: ['..gg..', '.gggg.', 'gggggg', '..gg..', '..gg..', '..gg..'],
+  house: ['..rr..', '.rrrr.', 'rrrrrr', '.SkkS.', '.SkkS.', '.SSSS.'],
+  bottle: ['..ww..', '..tt..', '.tTTt.', '.tTTt.', '.tttt.', '.tttt.'],
+  heart: ['.PP.PP', 'PPPPPP', 'PPPPPP', '.PPPP.', '..PP..', '......'],
+  shelf: ['y.o.b.', 'nnnnnn', '.p.y.o', 'nnnnnn', 'n....n', 'n....n'],
+  percent: ['ww...w', 'ww..w.', '...w..', '..w...', '.w..ww', 'w...ww'],
+  toolbox: ['..rr..', '.r..r.', 'rrrrrr', 'rryyrr', 'rrrrrr', 'rrrrrr'],
+  tire: ['.SSSS.', 'SsddsS', 'SdkkdS', 'SdkkdS', 'SsddsS', '.SSSS.'],
+  cards: ['wwww..', 'wrrw..', 'wwwwww', '..wrrw', '..wwww', '......'],
+  coin: ['.yyyy.', 'yooooy', 'yoyyoy', 'yoyyoy', 'yooooy', '.yyyy.'],
+  q: ['.yyyy.', 'yy..yy', '...yy.', '..yy..', '......', '..yy..'],
+};
+
+/** Ticket-shaped tag frame; C = rarity color, glyph drawn at (4,3). */
+const TAG_FRAME = [
+  '...CCCCCCCC.',
+  '..CkkkkkkkkC',
+  '.CkkkkkkkkkC',
+  'CkwkkkkkkkkC',
+  'CkkkkkkkkkkC',
+  'CkkkkkkkkkkC',
+  'CkkkkkkkkkkC',
+  'CkkkkkkkkkkC',
+  '.CkkkkkkkkkC',
+  '..CkkkkkkkkC',
+  '...CCCCCCCC.',
+  '............',
+];
+/** Shield-shaped garage badge; C = tier color, glyph drawn at (3,2). Tier 2 gets gold pips. */
+const GARAGE_FRAME = [
+  '.CCCCCCCCCC.',
+  'CkkkkkkkkkkC',
+  'CkkkkkkkkkkC',
+  'CkkkkkkkkkkC',
+  'CkkkkkkkkkkC',
+  'CkkkkkkkkkkC',
+  'CkkkkkkkkkkC',
+  'CkkkkkkkkkkC',
+  '.CkkkkkkkkC.',
+  '..CkkkkkkC..',
+  '...CkkkkC...',
+  '....CCCC....',
+];
+
+const TAG_ICONS: Record<string, { glyph: string; c: string }> = {
+  free_parts_pack: { glyph: 'gear', c: 'o' },
+  free_power_pack: { glyph: 'bolt', c: 'p' },
+  double_cash: { glyph: 'x2', c: 'y' },
+  rare_part: { glyph: 'star', c: 'p' },
+  tuning_card: { glyph: 'wrench', c: 'y' },
+  reroll_party: { glyph: 'arrows', c: 'g' },
+  investment: { glyph: 'up', c: 'g' },
+  garage_coupon: { glyph: 'house', c: 'B' },
+  extra_consumable: { glyph: 'bottle', c: 't' },
+  mulligan: { glyph: 'heart', c: 'P' },
+  generic: { glyph: 'q', c: 'S' },
+};
+
+const GARAGE_ICONS: Record<string, string> = {
+  extra_shelf: 'shelf',
+  showroom: 'shelf',
+  discount: 'percent',
+  wholesale: 'percent',
+  reroll_surplus: 'arrows',
+  reroll_glut: 'arrows',
+  toolbox: 'toolbox',
+  mega_toolbox: 'toolbox',
+  pit_crew: 'tire',
+  pit_crew_pro: 'tire',
+  pack_rat: 'cards',
+  pack_hoarder: 'cards',
+  savings: 'coin',
+  high_yield: 'coin',
+  tune_up: 'wrench',
+  master_tuner: 'wrench',
+  generic: 'q',
+};
+const GARAGE_TIER2 = new Set(['showroom', 'wholesale', 'reroll_glut', 'mega_toolbox', 'pit_crew_pro', 'pack_hoarder', 'high_yield', 'master_tuner']);
+
+function composeIcon(frame: string[], color: string, glyph: string[], ox: number, oy: number): string[] {
+  const rows = frame.map((r) => r.replace(/C/g, color).split(''));
+  glyph.forEach((gr, y) => {
+    for (let x = 0; x < gr.length; x++) if (gr[x] !== '.') rows[oy + y][ox + x] = gr[x];
+  });
+  return rows.map((r) => r.join(''));
+}
+
+function tagMap(id: string): string[] {
+  const t = TAG_ICONS[id] ?? TAG_ICONS.generic;
+  return composeIcon(TAG_FRAME, t.c, GLYPH[t.glyph], 4, 3);
+}
+
+function garageMap(id: string): string[] {
+  const tier2 = GARAGE_TIER2.has(id);
+  const rows = composeIcon(GARAGE_FRAME, tier2 ? 'y' : 'B', GLYPH[GARAGE_ICONS[id] ?? 'q'], 3, 2);
+  if (tier2) rows[1] = 'CwkkkkkkkkwC'.replace(/C/g, 'y');
+  return rows;
+}
 
 const TUNING_MAP = [
   '.........SS.',
@@ -533,9 +1326,218 @@ export function ensureTextures(scene: Phaser.Scene): void {
   for (const [k, rows] of Object.entries(PASSIVE_MAPS)) bake(scene, `pas_${k}`, rows, 12);
   for (const [k, rows] of Object.entries(CONSUMABLE_MAPS)) bake(scene, `con_${k}`, rows, 12);
   bake(scene, 'tuning', TUNING_MAP, 12);
+  for (const k of Object.keys(TAG_ICONS)) bake(scene, `tag_${k}`, tagMap(k), 12);
+  for (const k of Object.keys(GARAGE_ICONS)) bake(scene, `gar_${k}`, garageMap(k), 12);
+  for (const [k, rows] of Object.entries(TIER_MAPS)) bake(scene, `tier_${k}`, rows, 8);
+  for (const k of BRAND_ICON_IDS) brandIcon(scene, k);
   bakePack(scene, 'pack_parts', PAL.orange, PAL.yellow, SLOT_MAPS.transmission);
   bakePack(scene, 'pack_power', PAL.purple, PAL.pink, BOLT);
 }
+
+// ---------- Brand logo badges (parody shapes only, never real logos) ----------
+// Glyphs are 10x10, drawn inside a 12x12 rounded badge. 'X' = brand colour, 'A' = brand accent (badge rim),
+// other letters use the shared icon palette C.
+const BRAND_GLYPH: Record<string, string[]> = {
+  // Malibru: slanted bowtie-ish cross
+  malibru: [
+    '..........',
+    '..........',
+    '...XXXXXX.',
+    'XXXXwwwwXX',
+    'XwwwwwwwwX',
+    'XXXXXXXXXX',
+    'XXXXXXXXX.',
+    '.XXXXXX...',
+    '..........',
+    '..........',
+  ],
+  // Civique: flared H
+  civique: [
+    '..........',
+    '.XXX..XXX.',
+    '..XX..XX..',
+    '..XX..XX..',
+    '..XXXXXX..',
+    '..XXwwXX..',
+    '..XX..XX..',
+    '..XX..XX..',
+    '.XXX..XXX.',
+    '..........',
+  ],
+  // Stallion: galloping horse, running left
+  stallion: [
+    '..X.......',
+    '.XXX......',
+    'XXwXX.....',
+    'X.XXXXXX..',
+    '..XXXXXXXX',
+    '..XXXXXXX.',
+    '..X.X..XX.',
+    '.X..X...X.',
+    'X...X...X.',
+    '..........',
+  ],
+  // Avenger: "A" crest with wings
+  avenger: [
+    '....XX....',
+    '...XwwX...',
+    '...XXXX...',
+    '..XX..XX..',
+    'X.XXXXXX.X',
+    'XXXX..XXXX',
+    '.XX....XX.',
+    '.XX....XX.',
+    'XX......XX',
+    '..........',
+  ],
+  // Kaiju: spiky monster head, jaws open
+  kaiju: [
+    '.X..X..X..',
+    '.XXXXXXX..',
+    'XXyXXXXXX.',
+    'XXXXXXXXXX',
+    'XXXXXXXXXX',
+    'XXw.w.w...',
+    'XX........',
+    'XXw.w.w...',
+    'XXXXXXXXX.',
+    '.XXXXXXX..',
+  ],
+  // Viperion: snake head with fangs over an S-coil
+  viperion: [
+    '..XXXXXX..',
+    '.XyXXXXyX.',
+    'XXXXXXXXXX',
+    '.XwXXXXwX.',
+    '..w.XX.w..',
+    '....XX....',
+    '...XX.....',
+    '..XX...XX.',
+    '..XXXXXXX.',
+    '...XXXXX..',
+  ],
+  // Hellkat: snarling cat head
+  hellkat: [
+    'X........X',
+    'XX......XX',
+    'XXXXXXXXXX',
+    'XyyXXXXyyX',
+    'XXXXXXXXXX',
+    'XXXXkkXXXX',
+    '.XwXXXXwX.',
+    '.XXwXXwXX.',
+    '..XXXXXX..',
+    '...XXXX...',
+  ],
+  // Lamberghoul: bull skull, brand-coloured horns
+  lamberghoul: [
+    'X........X',
+    'XX......XX',
+    '.XXwwwwXX.',
+    '..wwwwww..',
+    '..wkwwkw..',
+    '..wwwwww..',
+    '...wwww...',
+    '...wkkw...',
+    '...wwww...',
+    '....ww....',
+  ],
+};
+
+/** Fallback colours if brands.json has no entry yet (brandById wins). */
+const BRAND_FALLBACK: Record<string, { color: number; accent: number }> = {
+  malibru: { color: 0xe0b040, accent: 0xb8b2c8 },
+  civique: { color: 0xf4ecd8, accent: 0xe8443a },
+  stallion: { color: 0xb8b2c8, accent: 0x3c78e8 },
+  avenger: { color: 0xf28c28, accent: 0x2b2833 },
+  kaiju: { color: 0x5bc24a, accent: 0xf2d43a },
+  viperion: { color: 0x3c78e8, accent: 0xf4ecd8 },
+  hellkat: { color: 0xe8443a, accent: 0x2b2833 },
+  lamberghoul: { color: 0xf2d43a, accent: 0x9b4de0 },
+};
+
+const BRAND_FRAME = [
+  '.AAAAAAAAAA.',
+  'AkkkkkkkkkkA',
+  'AkkkkkkkkkkA',
+  'AkkkkkkkkkkA',
+  'AkkkkkkkkkkA',
+  'AkkkkkkkkkkA',
+  'AkkkkkkkkkkA',
+  'AkkkkkkkkkkA',
+  'AkkkkkkkkkkA',
+  'AkkkkkkkkkkA',
+  'AkkkkkkkkkkA',
+  '.AAAAAAAAAA.',
+];
+
+const parseHex = (c: string | undefined): number | null => {
+  if (!c) return null;
+  const n = parseInt(c.replace(/^#|^0x/i, ''), 16);
+  return Number.isFinite(n) ? n : null;
+};
+
+/** Brand colour + accent as numbers (brands.json first, then the fallback table). */
+export function brandColors(id: string): { color: number; accent: number } {
+  const b = brandById(id);
+  const fb = BRAND_FALLBACK[id] ?? { color: PAL.ink, accent: PAL.inkDim };
+  return { color: parseHex(b?.color) ?? fb.color, accent: parseHex(b?.accent) ?? fb.accent };
+}
+
+/** Pixel map of a brand badge (12x12) with X/A still symbolic. */
+function brandMap(id: string): string[] {
+  const glyph = BRAND_GLYPH[id];
+  const rows = BRAND_FRAME.map((r) => r.split(''));
+  if (glyph) {
+    glyph.forEach((gr, y) => {
+      for (let x = 0; x < gr.length; x++) if (gr[x] !== '.') rows[1 + y][1 + x] = gr[x];
+    });
+  } else {
+    // Unknown brand: a plain colour chip
+    for (let y = 3; y < 9; y++) for (let x = 3; x < 9; x++) rows[y][x] = 'X';
+  }
+  return rows.map((r) => r.join(''));
+}
+
+/**
+ * Texture key for a brand's logo badge (12x12, baked on first use with the brand colours).
+ * Scale it up (setScale(2)) for big set panels.
+ */
+export function brandIcon(scene: Phaser.Scene, id: string): string {
+  const key = `brand_${id}`;
+  if (scene.textures.exists(key)) return key;
+  const { color, accent: acc } = brandColors(id);
+  // Very dark accents (black stripes) vanish on the dark badge: rim with the brand colour instead.
+  const lum = ((acc >> 16) & 255) * 0.3 + ((acc >> 8) & 255) * 0.59 + (acc & 255) * 0.11;
+  const accent = lum < 48 ? color : acc;
+  const rows = brandMap(id);
+  const g = scene.make.graphics({ x: 0, y: 0 }, false);
+  for (let y = 0; y < 12; y++) {
+    for (let x = 0; x < 12; x++) {
+      const ch = rows[y][x];
+      const col = ch === 'X' ? color : ch === 'A' ? accent : C[ch];
+      if (col === undefined) continue;
+      g.fillStyle(col, 1).fillRect(x, y, 1, 1);
+    }
+  }
+  g.generateTexture(key, 12, 12);
+  g.destroy();
+  return key;
+}
+
+/** All brand ids that have a drawn logo. */
+export const BRAND_ICON_IDS = Object.keys(BRAND_GLYPH);
+
+// ---------- Tier chevrons (8x8) ----------
+const TIER_MAPS: Record<Tier, string[]> = {
+  stock: ['........', '........', '........', '.dddddd.', '.dddddd.', '........', '........', '........'],
+  street: ['........', '........', '...tt...', '..tTTt..', '.tT..Tt.', 't......t', '........', '........'],
+  sport: ['...pp...', '..pPPp..', '.pP..Pp.', 'p..pp..p', '..pPPp..', '.pP..Pp.', 'p......p', '........'],
+  pro: ['...oo...', '..oyyo..', '.oo..oo.', '...oo...', '..oyyo..', '.oo..oo.', '...oo...', '..oyyo..'],
+};
+
+/** Texture key for a tier chevron badge ('tier_sport'). Baked in ensureTextures. */
+export const tierIcon = (tier: Tier) => `tier_${tier}`;
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
 
@@ -552,6 +1554,16 @@ export function consumableIcon(scene: Phaser.Scene, id: string, name?: string): 
     if (k && scene.textures.exists(`con_${k}`)) return `con_${k}`;
   }
   return 'con_generic';
+}
+
+/** Texture key for a tag (TagDef id); falls back to tag_generic. */
+export function tagIcon(scene: Phaser.Scene, id: string): string {
+  return scene.textures.exists(`tag_${id}`) ? `tag_${id}` : 'tag_generic';
+}
+
+/** Texture key for a garage upgrade (GarageDef id); falls back to gar_generic. */
+export function garageIcon(scene: Phaser.Scene, id: string): string {
+  return scene.textures.exists(`gar_${id}`) ? `gar_${id}` : 'gar_generic';
 }
 
 export const slotIcon = (slot: SlotId) => `slot_${slot}`;

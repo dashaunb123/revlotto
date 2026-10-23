@@ -1,7 +1,7 @@
 // Run over: the losing race, a tally of the run, the seed (to replay), New Run / Retry Seed / Title.
 //
 // LAYOUT: "RUN OVER" 32px y 28 | losing race panel (120,76)-(520,136) | stats panel (120,144)-(520,288)
-//         buttons y 302: NEW RUN (120) RETRY SEED (256) TITLE (392), each 128x24
+//         buttons y 302: NEW RUN (120, -> RunSetup) RETRY SEED (256, same car + heat) TITLE (392), each 128x24
 import Phaser from 'phaser';
 import { game } from '../game/game';
 import { goToPhase } from './nav';
@@ -46,21 +46,27 @@ export class GameOverScene extends Phaser.Scene {
     // run tally
     panel(this, 120, 144, 400, 148);
     const wins = hist.filter((r) => r.won).length;
-    const best = hist.length ? Math.min(...hist.map((r) => r.et)) : 0;
+    const ran = hist.filter((r) => !r.skipped && r.et > 0);
+    const best = ran.length ? Math.min(...ran.map((r) => r.et)) : 0;
+    const skipped = hist.filter((r) => r.skipped).length;
+    const meta = safe(() => game.meta(), null);
+    const endless = s.round > 4;
+    const record = meta?.bestEndlessRound ?? 0;
     const perfects = hist.reduce((n, r) => n + (r.perfectCount ?? 0), 0);
     const cash = hist.reduce((n, r) => n + (r.cashEarned ?? 0), 0);
     const raceNo = (s.round - 1) * 4 + s.race + 1;
     const rows: [string, string, number][] = [
-      ['ROUND REACHED', `${s.round} / 4`, PAL.ink],
-      ['RACE', `${raceNo} / 16${s.race === 3 ? ' (BOSS)' : ''}`, PAL.ink],
-      ['RACES WON', String(wins), PAL.green],
+      ['ROUND REACHED', endless ? `${s.round} (ENDLESS)` : `${s.round} / 4`, endless ? PAL.teal : PAL.ink],
+      ['RACE', `${raceNo}${endless ? '' : ' / 16'}${s.race === 3 ? ' (BOSS)' : ''}`, PAL.ink],
+      ['RACES WON', `${wins}${skipped ? `  (+${skipped} SKIPPED)` : ''}`, PAL.green],
+      ['FURTHEST ENDLESS', record > 4 ? `ROUND ${record}${endless && s.newEndlessRecord ? '  NEW!' : ''}` : '-', PAL.teal],
       ['BEST ET', best ? best.toFixed(3) : '-', PAL.yellow],
       ['PERFECT GRADES', String(perfects), PAL.green],
       ['CASH EARNED', `$${cash}`, PAL.yellow],
       ['SEED', s.seed, PAL.teal],
     ];
     rows.forEach(([k, v, c], i) => {
-      const y = 154 + i * 19;
+      const y = 152 + i * 17;
       const kt = txt(this, 136, y, k, 8, PAL.inkDim).setAlpha(0);
       const vt = txt(this, 504, y, v, 8, c, [1, 0]).setAlpha(0);
       this.time.delayedCall(500 + i * 140, () => {
@@ -71,9 +77,21 @@ export class GameOverScene extends Phaser.Scene {
       });
     });
 
-    const newRun = () => this.go(() => game.newRun());
+    const newRun = () => {
+      if (this.going) return;
+      this.going = true;
+      try {
+        game.abandonRun();
+      } catch {
+        /* optional */
+      }
+      this.cameras.main.fadeOut(200, 11, 10, 20);
+      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('RunSetup'));
+    };
     button(this, 120, 304, 128, 24, 'NEW RUN', newRun, PAL.red);
-    button(this, 256, 304, 128, 24, 'RETRY SEED', () => this.go(() => game.newRun(s.seed)), PAL.blue);
+    const car = s.car;
+    const heat = s.heat;
+    button(this, 256, 304, 128, 24, 'RETRY SEED', () => this.go(() => game.newRun(s.seed, { car, heat })), PAL.blue);
     button(this, 392, 304, 128, 24, 'TITLE', () => {
       if (this.going) return;
       this.going = true;
@@ -96,5 +114,13 @@ export class GameOverScene extends Phaser.Scene {
     }
     start();
     goToPhase(this, 250);
+  }
+}
+
+function safe<T>(fn: () => T, dflt: T): T {
+  try {
+    return fn();
+  } catch {
+    return dflt;
   }
 }

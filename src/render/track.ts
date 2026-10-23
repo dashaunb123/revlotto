@@ -30,6 +30,12 @@ export class Track {
   private cheerT = 0;
   private propLights!: Phaser.GameObjects.Graphics;
   private bob = 0;
+  private flashG!: Phaser.GameObjects.Graphics;
+  private flashT = 0;
+  private bulbs: { x: number; y: number; life: number }[] = [];
+  private rubberG!: Phaser.GameObjects.Graphics;
+  private rubberN = 0;
+  private oilG?: Phaser.GameObjects.Graphics;
 
   constructor(scene: Phaser.Scene, lengthM: number) {
     this.scene = scene;
@@ -38,11 +44,14 @@ export class Track {
     this.buildSky();
     this.addPar(this.cityTex(), 0, HORIZON_Y - 64, 640, 64, 0.04);
     this.crowd = this.addPar(this.standsTex(), 0, 112, 640, 82, 0.35);
+    this.flashG = this.add(scene.add.graphics().setScrollFactor(0));
     this.addPar(this.polesTex(), 0, 40, 640, 152, 0.7);
     this.addPar(this.wallTex(), 0, WALL_Y, 640, 16, 1);
     this.addPar(this.asphaltTex(), 0, FAR_TOP, 640, NEAR_BOTTOM - FAR_TOP, 1);
     this.addPar(this.foreTex(), 0, NEAR_BOTTOM, 640, GROUND_BOTTOM - NEAR_BOTTOM, 1.25);
     this.buildWorldProps();
+    // Skid marks: world-space, drawn over the strip and under the cars (world layer comes later).
+    this.rubberG = this.add(scene.add.graphics());
   }
 
   private add<T extends Phaser.GameObjects.GameObject>(o: T): T {
@@ -67,6 +76,92 @@ export class Track {
     } else {
       this.crowd.tilePositionY = Math.floor(this.bob / 600) % 2 && Math.floor(this.bob / 300) % 3 === 0 ? 1 : 0;
     }
+    this.updateBulbs(dtMs);
+  }
+
+  private updateBulbs(dtMs: number) {
+    if (this.flashT <= 0 && !this.bulbs.length) return;
+    this.flashT -= dtMs;
+    const tile = this.crowd.tilePositionX;
+    // a few pops per frame, only where the stands are (texture u 0..208 of 256), on the fan rows
+    for (let n = 0; this.flashT > 0 && n < 2 && this.bulbs.length < 14; n++) {
+      if (Math.random() > 0.35) continue;
+      const x = Math.floor(Math.random() * 640);
+      if (((((x + tile) % 256) + 256) % 256) > 204) continue;
+      this.bulbs.push({ x, y: 128 + Math.floor(Math.random() * 56), life: 60 + Math.random() * 70 });
+    }
+    const g = this.flashG;
+    g.clear();
+    this.bulbs = this.bulbs.filter((b) => (b.life -= dtMs) > 0);
+    for (const b of this.bulbs) {
+      const big = b.life > 50;
+      g.fillStyle(0xffffff, 0.22).fillRect(b.x - 3, b.y - 3, 7, 7);
+      g.fillStyle(0xffffff, 1).fillRect(b.x, b.y, 2, 2);
+      if (big) {
+        g.fillStyle(0xfff6c8, 0.8).fillRect(b.x - 3, b.y, 2, 2).fillRect(b.x + 3, b.y, 2, 2);
+        g.fillStyle(0xfff6c8, 0.8).fillRect(b.x, b.y - 3, 2, 2).fillRect(b.x, b.y + 3, 2, 2);
+      }
+    }
+  }
+
+  /** Camera flashbulbs popping in the stands for a while (with cheer() on a win). */
+  flashbulbs(ms = 2500) {
+    this.flashT = ms;
+  }
+
+  /**
+   * Lay rubber on the strip from world x0 to x1 at ground line y. a = darkness 0..1.
+   * Bounded: Graphics keeps every command, so we stop adding after a few hundred strokes.
+   */
+  rubber(x0: number, x1: number, y: number, a: number) {
+    if (this.rubberN > 900 || a <= 0.02) return;
+    this.rubberN++;
+    const l = Math.round(Math.min(x0, x1));
+    const w = Math.max(2, Math.round(Math.abs(x1 - x0)) + 1);
+    const g = this.rubberG;
+    g.fillStyle(0x0c0a10, Math.min(0.85, a)).fillRect(l, y - 3, w, 2);
+    g.fillStyle(0x0c0a10, Math.min(0.85, a) * 0.5).fillRect(l, y - 1, w, 1);
+  }
+
+  /**
+   * Boss Oil Slick: a glossy black puddle on the player's lane from world px x0 to x1, with a rainbow
+   * sheen and a hazard plate on the kerb below it. Drawn once; lives under the cars.
+   */
+  oilPatch(x0: number, x1: number, seed = 1) {
+    const sc = this.scene;
+    if (!this.oilG) this.oilG = this.add(sc.add.graphics());
+    const g = this.oilG;
+    const rnd = texRng(seed * 7919 + 17);
+    const top = LANE_NEAR_Y - 14;
+    const bot = LANE_NEAR_Y + 5;
+    const cx = (x0 + x1) / 2;
+    const half = (x1 - x0) / 2;
+    for (let y = top; y <= bot; y++) {
+      const u = (y - (top + bot) / 2) / ((bot - top) / 2); // -1..1
+      const w = half * Math.sqrt(Math.max(0, 1 - u * u * 0.85)) + (rnd() - 0.5) * 10;
+      const l = Math.round(cx - w + (rnd() - 0.5) * 6);
+      const r = Math.round(cx + w + (rnd() - 0.5) * 6);
+      g.fillStyle(0x16141f, 0.95).fillRect(l - 2, y, r - l + 4, 1);
+      g.fillStyle(0x050409, 0.97).fillRect(l, y, r - l, 1);
+    }
+    // sheen: thin rainbow streaks + a white glint
+    const sheen = [0x5cf2ff, 0xb46cff, 0xf25c9a, 0xf7d23e];
+    for (let i = 0; i < 6; i++) {
+      const y = Math.round(top + 3 + rnd() * (bot - top - 6));
+      const l = Math.round(cx - half * 0.6 + rnd() * half * 0.8);
+      const w = Math.round(8 + rnd() * half * 0.5);
+      g.fillStyle(sheen[i % sheen.length], 0.55).fillRect(l, y, w, 1);
+    }
+    g.fillStyle(0xffffff, 0.8).fillRect(Math.round(cx - half * 0.3), top + 4, 6, 1);
+    // hazard plate on the kerb under the patch
+    const pw = 36;
+    const px = Math.round(cx - pw / 2);
+    g.fillStyle(PAL.bgDeep, 1).fillRect(px - 1, NEAR_BOTTOM, pw + 2, 10);
+    for (let k = 0; k < pw; k += 6) g.fillStyle(k % 12 ? 0x111111 : PAL.yellow, 1).fillRect(px + k, NEAR_BOTTOM + 1, 6, 8);
+    const t = sc.add
+      .text(Math.round(cx), NEAR_BOTTOM + 5, 'OIL', { fontFamily: FONT, fontSize: '8px', color: hex(PAL.yellow), stroke: hex(PAL.bgDeep), strokeThickness: 3, resolution: 1 })
+      .setOrigin(0.5, 0.5);
+    this.add(t);
   }
 
   /** Crowd bounces for a while. */

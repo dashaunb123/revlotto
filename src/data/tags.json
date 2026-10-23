@@ -1,0 +1,12 @@
+[
+  { "id": "free_parts_pack", "name": "Parts Voucher", "desc": "Your next shop's Parts Pack is free.", "rarity": "common" },
+  { "id": "free_power_pack", "name": "Power Voucher", "desc": "Your next shop's Power Pack is free.", "rarity": "common" },
+  { "id": "double_cash", "name": "Double Down", "desc": "Your next race win pays double.", "rarity": "uncommon" },
+  { "id": "rare_part", "name": "Back Room", "desc": "Your next shop has an extra Pro part at 50% off.", "rarity": "uncommon" },
+  { "id": "tuning_card", "name": "Dyno Day", "desc": "Gain a tuning card now.", "rarity": "common" },
+  { "id": "reroll_party", "name": "Reroll Party", "desc": "2 free rerolls in your next shop.", "rarity": "common" },
+  { "id": "investment", "name": "Investment", "desc": "+$15 after your next boss win.", "rarity": "uncommon" },
+  { "id": "garage_coupon", "name": "Garage Coupon", "desc": "Your next garage upgrade is 50% off.", "rarity": "uncommon" },
+  { "id": "extra_consumable", "name": "Care Package", "desc": "Gain 2 random consumables now (up to your free slots).", "rarity": "common" },
+  { "id": "mulligan", "name": "Safety Net", "desc": "Your next race has a free Mulligan: lose it and rerun once.", "rarity": "rare" }
+]

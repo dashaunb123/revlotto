@@ -56,16 +56,16 @@
 </div>
 <script>window.DEVLOG = { agents: {}, overview: null };</script>
 <script src="devlog/status/overview.js"></script>
-<script src="devlog/status/engine.js"></script>
-<script src="devlog/status/run.js"></script>
-<script src="devlog/status/race.js"></script>
-<script src="devlog/status/shop.js"></script>
+<script src="devlog/status/p_core.js"></script>
+<script src="devlog/status/p_abilities.js"></script>
+<script src="devlog/status/p_visual.js"></script>
+<script src="devlog/status/p_ui.js"></script>
 <script src="devlog/status/integration.js"></script>
 <script src="devlog/status/activity.js"></script>
 <script>
 (function () {
   const D = window.DEVLOG, ov = D.overview || {};
-  const order = ['engine', 'run', 'race', 'shop', 'integration'];
+  const order = ['p_core', 'p_abilities', 'p_visual', 'p_ui', 'integration'];
   const agents = order.map(k => D.agents[k] && Object.assign(D.agents[k], { key: k })).filter(Boolean);
   const actHtml = k => {
     const x = D.activity && D.activity.agents[k];
@@ -96,6 +96,14 @@
 
   if (ov.testRequest) document.getElementById('testbox').innerHTML = `<div class="test"><b>Please test:</b> ${esc(ov.testRequest)}</div>`;
 
+  // If an agent's files changed after its last status note, trust the files: show it as working and flag the note as stale.
+  agents.forEach(a => {
+    const r = D.activity && D.activity.agents[a.key] && D.activity.agents[a.key].recent[0];
+    const editAt = r ? new Date(r.at) : null, noteAt = a.updated ? new Date(a.updated) : null;
+    a.stale = a.status !== 'done' && editAt && noteAt && editAt - noteAt > 3 * 60000;
+    if (a.status === 'queued' && editAt && noteAt && editAt > noteAt) { a.status = 'working'; a.current = 'Editing files (status note not updated yet)'; }
+  });
+
   document.getElementById('agents').innerHTML = agents.length ? agents.map(a => `
     <div class="agent">
       <h2><span>${esc(a.name)}</span><span class="badge ${esc(a.status)}">${esc(a.status)}</span></h2>
@@ -105,7 +113,7 @@
       ${a.notes ? `<div class="notes">${esc(a.notes)}</div>` : ''}
       <ul>${(a.done || []).map(x => `<li class="ok">${esc(x)}</li>`).join('')}${(a.todo || []).map(x => `<li class="todo">${esc(x)}</li>`).join('')}</ul>
       ${actHtml(a.key)}
-      <div class="meta">status note updated ${ago(a.updated)} · ${a.status === 'done' ? 'finished' : 'ETA ~' + (a.etaMinutes ?? '?') + ' min'}</div>
+      <div class="meta">${a.stale ? '<span style="color:var(--orange)">note is behind the live file activity · </span>' : ''}status note updated ${ago(a.updated)} · ${a.status === 'done' ? 'finished' : 'ETA ~' + (a.etaMinutes ?? '?') + ' min'}</div>
     </div>`).join('') : '<div class="empty">No agent status yet.</div>';
 
   const log = (ov.log || []).slice().reverse();

@@ -23,7 +23,8 @@ export const PAL = {
 
 export const hex = (n: number) => '#' + n.toString(16).padStart(6, '0');
 
-export const TIER_COLOR = { stock: PAL.inkDim, street: PAL.teal, pro: PAL.orange } as const;
+export const TIER_COLOR = { stock: PAL.inkDim, street: PAL.teal, sport: PAL.purple, pro: PAL.orange } as const;
+export const TIER_LABEL = { stock: 'STOCK', street: 'STREET', sport: 'SPORT', pro: 'PRO' } as const;
 export const RARITY_COLOR = { common: PAL.inkDim, uncommon: PAL.teal, rare: PAL.pink } as const;
 export const GRADE_COLOR = { perfect: PAL.green, good: PAL.yellow, miss: PAL.red } as const;
 

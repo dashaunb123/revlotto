@@ -280,6 +280,41 @@ export function toast(scene: Phaser.Scene, msg: string, color: number = PAL.red,
   if (color === PAL.red) sfx('error');
 }
 
+/**
+ * Gold "UNLOCKED" banner that slams in, sparkles and floats away. Several names queue one after
+ * another. Returns the total ms it takes so callers can sync a sound per name via onEach.
+ */
+export function unlockToast(scene: Phaser.Scene, names: string[], x = GAME_W / 2, y = 64, onEach?: (i: number) => void): number {
+  const STEP = 1250;
+  names.forEach((name, i) => {
+    scene.time.delayedCall(i * STEP, () => {
+      const head = txt(scene, 0, -7, 'UNLOCKED!', 8, PAL.bgDeep, [0.5, 0.5]);
+      const t = txt(scene, 0, 6, name.toUpperCase().slice(0, 28), 8, PAL.ink, [0.5, 0.5]);
+      t.setShadow(1, 1, hex(PAL.bgDeep), 0, false, true);
+      const w = Math.max(Math.ceil(t.width), 72) + 24;
+      const h = 30;
+      const g = scene.add.graphics();
+      g.fillStyle(PAL.bgDeep, 1).fillRect(-w / 2 + 3, -h / 2 + 3, w, h);
+      g.fillStyle(PAL.yellow, 1).fillRect(-w / 2, -h / 2, w, h);
+      g.fillStyle(PAL.orange, 1).fillRect(-w / 2 + 2, -1, w - 4, h / 2 - 1);
+      g.fillStyle(0xffffff, 0.35).fillRect(-w / 2, -h / 2, w, 2);
+      // little stars at both ends
+      for (const sx of [-w / 2 + 8, w / 2 - 8]) g.fillStyle(PAL.ink, 1).fillRect(sx - 1, -8, 2, 6).fillRect(sx - 3, -6, 6, 2);
+      const c = scene.add.container(Math.round(x), Math.round(y), [g, head, t]).setDepth(1300);
+      c.setScale(2.2).setAlpha(0);
+      scene.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 260, ease: 'Back.easeOut' });
+      scene.time.delayedCall(180, () => {
+        burst(scene, x, y, [PAL.yellow, PAL.ink, PAL.orange], 26, 140, 1310);
+        scene.cameras.main.shake(90, 0.003);
+      });
+      scene.tweens.add({ targets: head, alpha: 0.4, yoyo: true, repeat: 4, duration: 160, delay: 260 });
+      scene.tweens.add({ targets: c, alpha: 0, y: y - 12, delay: STEP - 260, duration: 240, onComplete: () => c.destroy() });
+      onEach?.(i);
+    });
+  });
+  return names.length * STEP;
+}
+
 // ---------------------------------------------------------------------------------------------
 // Tooltip (one per scene)
 
@@ -417,14 +452,23 @@ export function hoverTilt(scene: Phaser.Scene, c: Phaser.GameObjects.Container, 
 }
 
 // ---------------------------------------------------------------------------------------------
-// Tiny WebAudio blips (no assets). Kept here so menus don't depend on the race audio module.
+// Tiny WebAudio blips (no assets). They play through audio.ts's shared context + master, so M mutes them too.
+// (Import kept in this section on purpose: this block is owned by the audio pass.)
+import { audioOut } from './audio';
 
-let actx: AudioContext | null = null;
+let bus: GainNode | null = null; // x4.5 so blips keep their old loudness under the 0.22 master
 let lastHover = 0;
 export type Sfx = 'hover' | 'click' | 'buy' | 'error' | 'cash' | 'pack' | 'flip' | 'pick' | 'sell' | 'reroll' | 'fanfare';
 
 function tone(freq: number, dur: number, type: OscillatorType, vol: number, delay = 0, slideTo?: number) {
-  if (!actx) return;
+  const a = audioOut();
+  if (!a) return;
+  const actx = a.ctx;
+  if (!bus || bus.context !== actx) {
+    bus = actx.createGain();
+    bus.gain.value = 4.5;
+    bus.connect(a.out);
+  }
   const t0 = actx.currentTime + delay;
   const o = actx.createOscillator();
   const g = actx.createGain();
@@ -433,19 +477,17 @@ function tone(freq: number, dur: number, type: OscillatorType, vol: number, dela
   if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
   g.gain.setValueAtTime(vol, t0);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  o.connect(g).connect(actx.destination);
+  o.connect(g).connect(bus);
   o.start(t0);
   o.stop(t0 + dur + 0.02);
+  o.onended = () => {
+    o.disconnect();
+    g.disconnect();
+  };
 }
 
 export function sfx(kind: Sfx) {
   try {
-    if (!actx) {
-      const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
-      if (!AC) return;
-      actx = new AC();
-    }
-    if (actx!.state === 'suspended') actx!.resume();
     switch (kind) {
       case 'hover': {
         const now = performance.now();
@@ -496,3 +538,53 @@ export function sfx(kind: Sfx) {
     /* audio is optional */
   }
 }
+
+// ---------------------------------------------------------------------------------------------
+// Content-expansion bits: heat badge, padlock, round labels, tag / garage icon lookup.
+
+export const HEAT_COLORS = [PAL.inkDim, PAL.yellow, PAL.yellow, PAL.orange, PAL.orange, PAL.red, PAL.red, PAL.pink, PAL.purple];
+export const heatColor = (h: number) => HEAT_COLORS[Phaser.Math.Clamp(Math.round(h), 0, HEAT_COLORS.length - 1)];
+
+/** Tiny 7x9 flame. */
+export function drawFlame(g: Phaser.GameObjects.Graphics, x: number, y: number, col: number) {
+  g.fillStyle(col, 1).fillRect(x + 3, y, 1, 2).fillRect(x + 2, y + 2, 3, 2).fillRect(x + 1, y + 4, 5, 3).fillRect(x + 2, y + 7, 3, 2);
+  g.fillStyle(PAL.yellow, 1).fillRect(x + 3, y + 5, 1, 3);
+}
+
+/** "HEAT 3" chip with a flame. origin 0 = left edge at x, 1 = right edge at x. Box is 12 tall, centered on y. */
+export function heatBadge(scene: Phaser.Scene, x: number, y: number, heat: number, originX: 0 | 0.5 | 1 = 0): Phaser.GameObjects.Container {
+  const col = heatColor(heat);
+  const label = `HEAT ${heat}`;
+  const w = label.length * 8 + 18;
+  const g = scene.add.graphics();
+  g.fillStyle(PAL.bgDeep, 1).fillRect(1, -5, w, 12);
+  g.fillStyle(col, 1).fillRect(0, -6, w, 12);
+  g.fillStyle(PAL.bgDeep, 1).fillRect(1, -5, 11, 10);
+  drawFlame(g, 3, -5, heat >= 5 ? PAL.red : PAL.orange);
+  g.fillStyle(0xffffff, 0.3).fillRect(0, -6, w, 1);
+  const t = txt(scene, 14, 0, label, 8, PAL.bgDeep, [0, 0.5]);
+  const c = scene.add.container(Math.round(x - w * originX), Math.round(y), [g, t]);
+  c.setSize(w, 12);
+  c.setData('w', w);
+  return c;
+}
+
+/** Padlock, about 12x14, top-left at (x, y). */
+export function drawLock(g: Phaser.GameObjects.Graphics, x: number, y: number, col: number = PAL.inkDim, s = 1) {
+  g.fillStyle(col, 1);
+  g.fillRect(x + 3 * s, y, 6 * s, 2 * s).fillRect(x + 2 * s, y + 1 * s, 2 * s, 5 * s).fillRect(x + 8 * s, y + 1 * s, 2 * s, 5 * s);
+  g.fillRect(x, y + 6 * s, 12 * s, 8 * s);
+  g.fillStyle(PAL.bgDeep, 1).fillRect(x + 5 * s, y + 8 * s, 2 * s, 4 * s);
+}
+
+/** 'ROUND 6' plus an ENDLESS marker past the final round. */
+export const roundLabel = (round: number) => (round > 4 ? `ENDLESS ROUND ${round}` : `ROUND ${round}`);
+
+function iconKey(scene: Phaser.Scene, prefix: string, id: string): string {
+  const slug = id.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+  for (const k of [id, slug]) if (scene.textures.exists(`${prefix}_${k}`)) return `${prefix}_${k}`;
+  if (scene.textures.exists(`${prefix}_generic`)) return `${prefix}_generic`;
+  return 'pas_generic';
+}
+export const tagIconKey = (scene: Phaser.Scene, id: string) => iconKey(scene, 'tag', id);
+export const garageIconKey = (scene: Phaser.Scene, id: string) => iconKey(scene, 'gar', id);

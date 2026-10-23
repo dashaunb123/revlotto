@@ -1,0 +1,20 @@
+[
+  { "id": "extra_shelf", "name": "Extra Shelf", "desc": "+1 item in every shop.", "cost": 10, "tier": 1 },
+  { "id": "showroom", "name": "Showroom", "desc": "+1 more item in every shop (+2 total).", "cost": 10, "tier": 2, "requires": "extra_shelf" },
+  { "id": "discount", "name": "Discount Card", "desc": "Shop items and packs cost 25% less.", "cost": 10, "tier": 1 },
+  { "id": "wholesale", "name": "Wholesale", "desc": "Shop items and packs cost 40% less.", "cost": 10, "tier": 2, "requires": "discount" },
+  { "id": "reroll_surplus", "name": "Reroll Surplus", "desc": "Rerolls cost $2 less.", "cost": 10, "tier": 1 },
+  { "id": "reroll_glut", "name": "Reroll Glut", "desc": "Your first reroll in every shop is free.", "cost": 10, "tier": 2, "requires": "reroll_surplus" },
+  { "id": "toolbox", "name": "Toolbox", "desc": "+1 passive slot.", "cost": 10, "tier": 1 },
+  { "id": "mega_toolbox", "name": "Mega Toolbox", "desc": "+1 more passive slot (+2 total).", "cost": 10, "tier": 2, "requires": "toolbox" },
+  { "id": "pit_crew", "name": "Pit Crew", "desc": "+1 consumable slot.", "cost": 10, "tier": 1 },
+  { "id": "pit_crew_pro", "name": "Pit Crew Pro", "desc": "+1 more consumable slot (+2 total).", "cost": 10, "tier": 2, "requires": "pit_crew" },
+  { "id": "pack_rat", "name": "Pack Rat", "desc": "Pick 2 cards from every pack.", "cost": 10, "tier": 1 },
+  { "id": "pack_hoarder", "name": "Pack Hoarder", "desc": "Packs show 4 cards.", "cost": 10, "tier": 2, "requires": "pack_rat" },
+  { "id": "savings", "name": "Savings Account", "desc": "Entering a shop: +$1 per $5 you hold (max $5).", "cost": 10, "tier": 1 },
+  { "id": "high_yield", "name": "High Yield", "desc": "Savings interest cap raised to $10.", "cost": 10, "tier": 2, "requires": "savings" },
+  { "id": "tune_up", "name": "Tune-Up", "desc": "Gain a free tuning card now and at the start of every round.", "cost": 10, "tier": 1 },
+  { "id": "master_tuner", "name": "Master Tuner", "desc": "Tuning gives +15% per level instead of +10%.", "cost": 10, "tier": 2, "requires": "tune_up" },
+  { "id": "brand_loyalty", "name": "Brand Loyalty", "desc": "Shops push brands you run twice as hard.", "cost": 10, "tier": 1 },
+  { "id": "brand_fanatic", "name": "Brand Fanatic", "desc": "Shops push brands you run three times as hard.", "cost": 10, "tier": 2, "requires": "brand_loyalty" }
+]

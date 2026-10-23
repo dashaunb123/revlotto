@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Revlotto Jukebox</title>
+<style>
+  body { margin: 0; background: #0b0a14; color: #f4ecd8; font: 15px/1.5 ui-monospace, Consolas, monospace; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 24px 16px; }
+  h1 { color: #f7d23e; text-shadow: 3px 3px 0 #e8413c; font-size: 26px; margin: 0 0 6px; }
+  p { color: #9a8fb8; margin: 0 0 18px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  button { font: inherit; background: #1c1830; color: inherit; border: 2px solid #4a3f78; box-shadow: 4px 4px 0 #000; padding: 12px; cursor: pointer; }
+  button.on { border-color: #5ad25a; color: #5ad25a; }
+  .row { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>JUKEBOX</h1>
+  <p>Click a track. It loops forever; switching crossfades. "Duck" plays the garage rev to hear the music get out of the way.</p>
+  <div class="grid" id="grid"></div>
+  <div class="row"><button id="duck">Duck: install + rev</button><button id="mute">Mute (M)</button></div>
+</div>
+<script type="module" src="./music.ts"></script>
+</body>
+</html>

@@ -10,6 +10,7 @@ import type {
   ShiftWindow,
   SimState,
 } from '../core/types';
+import { buildHazards, gustAt, inSpan, DECOY_LEN, type Hazards } from './bossMods';
 
 export const SIM_DT = 1 / 120;
 export const TRACK_LENGTH = 402.3;
@@ -60,6 +61,39 @@ const SHIFT_GEAR_MULT: Record<Grade, number> = { perfect: 1.0, good: 0.96, miss:
 const LIMITER_MISS_TIME = 0.15;
 const LIMITER_PERIOD = 0.08;
 
+// ---------------- Boss hazards ----------------
+/** Rear axle sits this far (m) behind state.x (the front bumper). Oil is judged at the rear wheels. */
+export const REAR_M = 7;
+/** Grip while the rear wheels roll over oil. */
+const OIL_GRIP = 0.55;
+/** A shift (or launch) on oil: wheels flare for this long with drive cut to OIL_SPIN_DRIVE. */
+const OIL_SPIN_TIME = 0.55;
+const OIL_SPIN_DRIVE = 0.3;
+/** Shifting on oil or tripping Sudden Death yields this ET (a DNF the result screen can show). */
+export const DNF_ET = 99.999;
+
+/** All boss modifier ids on this race (primary + Heat 8 extras) and their merged params. */
+export function bossMods(setup: RaceSetup): { mods: string[]; params: Record<string, number> } {
+  const b = setup.boss;
+  if (!b) return { mods: [], params: {} };
+  const mods = [b.modifier];
+  let params = { ...b.params };
+  for (const e of b.extra ?? []) {
+    if (!mods.includes(e.modifier)) mods.push(e.modifier);
+    params = { ...e.params, ...params };
+  }
+  return { mods, params };
+}
+
+/** Live boss state for the scene / bots (not part of SimState so the core types stay stable). */
+export interface HazardState {
+  onOil: boolean;
+  spin: number; // seconds of oil wheelspin left
+  gust: number; // 0..1
+  decoy: boolean; // decoy flash lit
+  dnf: string | null; // e.g. 'SUDDEN DEATH'
+}
+
 // ---------------- Ghost curve ----------------
 const GHOST_REACTION = 0.08;
 const GHOST_TAU_FRAC = 0.5;
@@ -106,6 +140,7 @@ function newContext(): RaceContext {
     perfectCount: 0,
     cashEarned: 0,
     notes: [],
+    forceLoss: false,
   };
 }
 
@@ -126,15 +161,23 @@ export class RaceSim implements IRaceSim {
   private nitroLeft = 0;
   private nitroUsed = false;
   private finishedResult: RaceResult | null = null;
+  /** Boss hazards (empty set of mods on regular races). */
+  readonly hz: Hazards;
+  readonly hzs: HazardState = { onOil: false, spin: 0, gust: 0, decoy: false, dnf: null };
+  /** Sim time the tree starts (earlier than TREE_START when Hair Trigger's first amber is early). */
+  readonly treeStart: number;
 
   constructor(setup: RaceSetup) {
     this.setup = setup;
     this.quirks = new Set(setup.quirks);
+    const bm = bossMods(setup);
+    this.hz = buildHazards(bm.mods, bm.params);
+    this.treeStart = Math.min(TREE_START, Math.round((this.hz.ambers[0] - 0.5) * 120) / 120);
     const p = Math.max(50, setup.stats.power);
     const v4 = V4_BASE * Math.pow(p / 200, V4_EXP);
     this.vTop = GEAR_FRAC.map((f) => f * v4);
     this.state = {
-      t: TREE_START,
+      t: this.treeStart,
       phase: 'tree',
       lights: 0,
       launched: false,
@@ -163,29 +206,80 @@ export class RaceSim implements IRaceSim {
     return this.vTop[Math.max(0, Math.min(3, gear - 1))];
   }
 
-  private windowMult(): number {
-    return Math.max(0.2, this.setup.stats.shiftWindow) * this.setup.extraShiftWindowMult;
+  private windowMult(gear = this.state?.gear ?? 1): number {
+    const h = this.hz;
+    const gust = this.hzs.gust > 0 ? 1 - (1 - h.gustWin) * this.hzs.gust : 1;
+    const w = h.widths[Math.max(0, Math.min(2, gear - 1))] ?? 1;
+    return Math.max(0.2, this.setup.stats.shiftWindow) * this.setup.extraShiftWindowMult * h.windowMult * w * gust;
   }
 
-  private computeWindow(): ShiftWindow {
-    const m = this.windowMult();
+  /** The window for a gear right now (also used by the scene to preview the next gear). */
+  windowFor(gear: number): ShiftWindow {
+    const m = this.windowMult(gear);
     const ph = SHIFT_PERFECT_HALF * m;
     const gh = Math.max(ph + 0.02, SHIFT_GOOD_HALF * Math.sqrt(m));
+    const c = this.hz.centers[Math.max(0, Math.min(2, gear - 1))];
+    // A moved window has a late edge too: shifting past it is a Miss.
+    const center = c ?? SHIFT_CENTER;
     return {
-      perfectLo: SHIFT_CENTER - ph,
-      perfectHi: Math.min(1.0, SHIFT_CENTER + ph),
-      goodLo: SHIFT_CENTER - gh,
-      goodHi: 1.0,
+      perfectLo: center - ph,
+      perfectHi: Math.min(1.0, center + ph),
+      goodLo: center - gh,
+      goodHi: c === null ? 1.0 : Math.min(1.0, center + gh),
     };
   }
 
+  private computeWindow(): ShiftWindow {
+    return this.windowFor(this.state?.gear ?? 1);
+  }
+
   private launchWindowMult(): number {
-    return this.setup.launchWindowMult * (this.quirks.has('two_step') ? 1.5 : 1);
+    return this.setup.launchWindowMult * this.hz.launchMult * (this.quirks.has('two_step') ? 1.5 : 1);
+  }
+
+  /** Rear wheels over an oil patch right now? */
+  rearOnOil(): boolean {
+    return this.hz.oil.length > 0 && inSpan(this.hz.oil, this.state.x - REAR_M);
+  }
+
+  /** Sudden Death: a Miss ends the race as a loss on the spot. */
+  private checkSudden(e: GradeEvent) {
+    if (!this.hz.suddenDeath || e.grade !== 'miss' || e.kind === 'nitro') return;
+    if (this.state.phase === 'finished') return;
+    this.dnf('SUDDEN DEATH');
+  }
+
+  private dnf(reason: string) {
+    const s = this.state;
+    this.hzs.dnf = reason;
+    this.ctx.forceLoss = true;
+    s.et = DNF_ET;
+    s.trapSpeedKph = Math.round(s.v * 3.6 * 10) / 10;
+    s.phase = 'finished';
+    s.nitroActive = false;
+    if (!s.launched) {
+      s.launched = true;
+      s.reaction = s.reaction ?? 0;
+    }
+    for (const h of this.setup.hooks) h.onFinish?.({ et: DNF_ET, targetEt: this.setup.targetEt, won: false }, this.ctx);
+    this.finishedResult = {
+      et: DNF_ET,
+      targetEt: this.setup.targetEt,
+      won: false,
+      margin: Math.round((this.setup.targetEt - DNF_ET) * 1000) / 1000,
+      reaction: s.reaction ?? 0,
+      trapSpeedKph: s.trapSpeedKph,
+      grades: s.grades.slice(),
+      perfectCount: this.ctx.perfectCount,
+      passiveCash: this.ctx.cashEarned,
+      dnf: reason,
+    };
   }
 
   private pushGrade(e: GradeEvent): GradeEvent {
     this.state.grades.push(e);
     if (e.grade === 'perfect') this.ctx.perfectCount++;
+    this.checkSudden(e);
     return e;
   }
 
@@ -200,8 +294,13 @@ export class RaceSim implements IRaceSim {
       s.nitroAvailable = false;
       s.nitroActive = true;
       this.nitroLeft = this.setup.stats.nitroDuration;
-      const grade: Grade = s.wheelspin ? 'miss' : s.gear >= 2 ? 'perfect' : 'good';
-      return this.pushGrade({ kind: 'nitro', grade, t: s.t, gear: s.gear, label: s.wheelspin ? 'SPIN' : 'NOS' });
+      const oil = this.rearOnOil();
+      const spun = s.wheelspin || oil;
+      if (oil) this.hzs.spin = OIL_SPIN_TIME;
+      const grade: Grade = spun ? 'miss' : s.gear >= 2 ? 'perfect' : 'good';
+      const e = this.pushGrade({ kind: 'nitro', grade, t: s.t, gear: s.gear, label: oil ? 'OIL' : s.wheelspin ? 'SPIN' : 'NOS' });
+      for (const h of this.setup.hooks) h.onNitro?.(grade, s.gear, this.ctx);
+      return e;
     }
 
     // 'go'
@@ -231,7 +330,12 @@ export class RaceSim implements IRaceSim {
     const r = s.rpm;
     let grade: Grade;
     let label: string;
-    if (this.limiterTime > LIMITER_MISS_TIME) {
+    const oil = this.rearOnOil();
+    if (oil) {
+      grade = 'miss';
+      label = 'OIL';
+      this.hzs.spin = OIL_SPIN_TIME;
+    } else if (this.limiterTime > LIMITER_MISS_TIME) {
       grade = 'miss';
       label = 'LIMITER';
     } else if (r >= w.perfectLo && r <= w.perfectHi + 0.005) {
@@ -245,9 +349,10 @@ export class RaceSim implements IRaceSim {
       label = r < w.goodLo ? 'EARLY' : 'LATE';
     }
     const rpmRate = Math.max(0.02, Math.abs(s.a) / this.vTop[s.gear - 1]);
-    const offsetMs = Math.round(((r - SHIFT_CENTER) / rpmRate) * 1000);
+    const offsetMs = Math.round(((r - (w.perfectLo + w.perfectHi) / 2) / rpmRate) * 1000);
     const fromGear = s.gear;
     const e = this.pushGrade({ kind: 'shift', grade, t: s.t, gear: fromGear, offsetMs, label });
+    if ((s.phase as SimState['phase']) === 'finished') return e; // Sudden Death
 
     s.gear = fromGear + 1;
     this.shiftTimer = SHIFT_TIME[grade] * (this.quirks.has('fast_shift') ? 0.5 : 1);
@@ -256,6 +361,12 @@ export class RaceSim implements IRaceSim {
     // gearPowerMult resets each shift; onShift hooks then run and may set it for the new gear.
     this.ctx.gearPowerMult = 1;
     for (const h of this.setup.hooks) h.onShift?.(grade, fromGear, this.ctx);
+    // A hook may scale this shift's time (Lamberghoul's Doom Shift: 0 = instant). One-shot.
+    const stm = (this.ctx as { shiftTimeMult?: number }).shiftTimeMult;
+    if (typeof stm === 'number') {
+      this.shiftTimer *= stm;
+      delete (this.ctx as { shiftTimeMult?: number }).shiftTimeMult;
+    }
     this.updateRpm();
     return e;
   }
@@ -266,6 +377,7 @@ export class RaceSim implements IRaceSim {
     s.reaction = reaction;
     this.launchTime = s.t;
     this.launchGrade = grade;
+    if (this.rearOnOil()) this.hzs.spin = OIL_SPIN_TIME;
     for (const h of this.setup.hooks) h.onLaunch?.(grade, this.ctx);
   }
 
@@ -277,7 +389,10 @@ export class RaceSim implements IRaceSim {
     s.t = Math.round((s.t + dt) * 1e6) / 1e6;
 
     if (s.phase === 'tree') {
-      s.lights = s.t >= 0 ? 4 : s.t >= -0.5 ? 3 : s.t >= -1.0 ? 2 : s.t >= -1.5 ? 1 : 0;
+      const am = this.hz.ambers;
+      s.lights = s.t >= 0 ? 4 : s.t >= am[2] ? 3 : s.t >= am[1] ? 2 : s.t >= am[0] ? 1 : 0;
+      const d = this.hz.decoyT;
+      this.hzs.decoy = d !== null && s.t >= d && s.t < d + DECOY_LEN;
       // Pre-stage rev: engine held a bit off idle once the ambers start
       s.rpm = s.lights > 0 ? 0.42 + 0.03 * Math.sin(s.t * 40) : IDLE_RPM;
       s.rpmAbs = this.toAbs(s.rpm);
@@ -285,7 +400,9 @@ export class RaceSim implements IRaceSim {
         s.t = 0;
         s.lights = 4;
         s.phase = 'running';
+        this.hzs.decoy = false;
         for (const h of this.setup.hooks) h.onStart?.(this.ctx);
+        if (s.phase !== 'running') return; // Sudden Death on a false start
         if (this.falseStarted) this.doLaunch('miss', 0);
         else if (this.earlyPress) {
           this.pushGrade({ kind: 'launch', grade: 'perfect', t: 0, offsetMs: 0, label: 'PERFECT' });
@@ -361,6 +478,18 @@ export class RaceSim implements IRaceSim {
     if (s.gear === 1) gripMult *= ctx.firstGearGripMult;
     if (sinceLaunch < this.setup.gripEarlySeconds) gripMult *= this.setup.gripEarlyMult;
 
+    // --- boss hazards ---
+    const hzs = this.hzs;
+    hzs.onOil = this.rearOnOil();
+    if (hzs.onOil) gripMult *= OIL_GRIP;
+    hzs.gust = this.hz.gusts.length ? gustAt(this.hz, s.t) : 0;
+    let spinCut = 1;
+    if (hzs.spin > 0) {
+      hzs.spin = Math.max(0, hzs.spin - dt);
+      spinCut = OIL_SPIN_DRIVE;
+    }
+    const dragMult = 1 + this.hz.gustDrag * hzs.gust;
+
     const power = Math.max(0, (st.power + nitro) * pMult);
     const gearing = Math.max(0.1, st.gearing * ctx.gearingMult);
 
@@ -390,7 +519,11 @@ export class RaceSim implements IRaceSim {
       aDrive = aGrip;
       wheelspin = true;
     }
-    const aDrag = (CDA * Math.max(0.05, st.drag) * s.v * s.v) / W + (s.v > 0.1 ? ROLLING * G : 0);
+    if (spinCut < 1 && driveOn) {
+      aDrive *= spinCut;
+      wheelspin = true;
+    }
+    const aDrag = (CDA * Math.max(0.05, st.drag) * dragMult * s.v * s.v) / W + (s.v > 0.1 ? ROLLING * G : 0);
     let a = aDrive - aDrag;
     if (s.v <= 0 && a < 0) a = 0;
 
@@ -401,7 +534,7 @@ export class RaceSim implements IRaceSim {
     s.x += s.v * dt;
     s.a = a;
     s.limiter = limiter;
-    s.wheelspin = wheelspin && sinceLaunch < 4;
+    s.wheelspin = wheelspin && (sinceLaunch < 4 || hzs.spin > 0 || hzs.onOil);
 
     // rpm for display/grading
     const rNow = s.v / vt;
@@ -423,7 +556,7 @@ export class RaceSim implements IRaceSim {
       s.trapSpeedKph = Math.round(s.v * 3.6 * 10) / 10;
       s.phase = 'finished';
       s.nitroActive = false;
-      const won = et <= this.setup.targetEt;
+      const won = et <= this.setup.targetEt && !ctx.forceLoss;
       for (const h of this.setup.hooks) h.onFinish?.({ et, targetEt: this.setup.targetEt, won }, ctx);
       this.finishedResult = {
         et,

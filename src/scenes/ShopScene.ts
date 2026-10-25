@@ -50,12 +50,13 @@ import {
 import { PACK_W, SLOT_SHORT, ensureTextures, slotIcon } from '../render/icons';
 import { Card } from '../render/shop/card';
 import { consumableSlotCard, garageCard, iconKeyFor, passiveSlotCard, shopItemCard } from '../render/shop/factory';
-import { STAT_LABEL, brandTip, consumableTip, fmtStat, garageTip, installedPartTip, isGood, paragonTip, passiveTip, shopItemTip, tagTip, tuningTip } from '../render/shop/describe';
+import { STAT_LABEL, brandTip, consumableTip, fmtStat, garageTip, installedPartTip, isGood, loyaltySaved, paragonTip, passiveTip, shopItemTip, tagTip, tuningTip } from '../render/shop/describe';
 import { brandInfo, brandLogo, ownedBrands, paragonOf } from '../render/shop/factory';
 import { activeParagon, setLevel } from '../game/brands';
 import { ParagonTransform } from '../render/shop/packOverlay';
 import { PackOverlay } from '../render/shop/packOverlay';
 import { carVisualFromParts, makeCar } from '../render/car';
+import { ShowcaseSlot, use3D } from '../render/three/showcaseSlot';
 import { engineProfileFromParts, revBlip, sfx as audio } from '../render/audio';
 
 type Obj = Phaser.GameObjects.GameObject;
@@ -151,6 +152,8 @@ export class ShopScene extends Phaser.Scene {
   private lastParagon: string | null = null;
   private prevParts: Record<SlotId, import('../core/types').InstalledPart> | null = null;
   private transform: ParagonTransform | null = null;
+  /** 3D mode: the garage car as a studio showcase behind the panel (the pixel car stays as the fallback). */
+  private slot: ShowcaseSlot | null = null;
   private transformPending: string | null = null;
 
   constructor() {
@@ -191,6 +194,7 @@ export class ShopScene extends Phaser.Scene {
     this.prevParts = null;
     this.transform = null;
     this.transformPending = null;
+    this.slot = null;
 
     ensureTextures(this);
     if (game.state.phase !== 'shop' || !game.state.shop) {
@@ -242,7 +246,7 @@ export class ShopScene extends Phaser.Scene {
     this.bgTile = this.add.tileSprite(0, 0, GAME_W, 360, 'shop_bg').setOrigin(0, 0);
 
     panel(this, -2, -2, 644, 32, PAL.panel, PAL.panelEdge);
-    panel(this, 6, 34, 200, 84, 0x15122a);
+    const garageG = panel(this, 6, 34, 200, 84, 0x15122a);
     panel(this, 6, 122, 200, 232);
     panel(this, 214, 34, 420, 84);
     panel(this, 214, 122, 420, 118, 0x231d3d);
@@ -256,6 +260,10 @@ export class ShopScene extends Phaser.Scene {
     road.fillStyle(PAL.asphalt, 1).fillRect(8, 104, 196, 12);
     road.fillStyle(PAL.asphaltLight, 1).fillRect(8, 104, 196, 2);
     for (let x = 12; x < 200; x += 16) road.fillStyle(PAL.stripe, 0.4).fillRect(x, 110, 8, 1);
+    if (use3D()) {
+      this.slot = new ShowcaseSlot(this, { rect: { x: 8, y: 36, w: 196, h: 80 }, focus: { x: 16, y: 50, w: 180, h: 62 }, after: garageG, bg: 0x15122a });
+      this.slot.cover(road);
+    }
 
     // parts
     txt(this, 12, 127, 'PARTS', 8, PAL.ink);
@@ -573,8 +581,11 @@ export class ShopScene extends Phaser.Scene {
     if (!this.transformPending) this.prevParts = JSON.parse(JSON.stringify(game.state.parts));
     try {
       // a pending transform keeps the old car on the road until the light show swaps it
-      const car = makeCar(this, 106, 108, carVisualFromParts(parts, runLook()), 2);
+      const visual = carVisualFromParts(parts, runLook());
+      const car = makeCar(this, 106, 108, visual, 2);
       this.car = car;
+      this.slot?.cover(car);
+      this.slot?.setCar(visual, first || this.deferCarPop ? 'none' : 'swap');
       this.tweens.add({ targets: car, y: 107, duration: 70, yoyo: true, repeat: -1, repeatDelay: 40 });
       if (!first && !this.deferCarPop) this.popCar();
       this.deferCarPop = false;
@@ -592,6 +603,7 @@ export class ShopScene extends Phaser.Scene {
     if (!car || !car.active) return;
     pop(this, car, 1.15, 300);
     car.flameBurst?.(260);
+    this.slot?.pop();
     burst(this, 106, 90, [PAL.ink, PAL.orange, PAL.yellow], 16, 80, 20);
   }
 
@@ -1073,6 +1085,8 @@ export class ShopScene extends Phaser.Scene {
         const dt = txt(this, -1, 30, '50% OFF', 8, PAL.bgDeep, [0.5, 0.5]);
         c.add([g, dt]);
         this.tweens.add({ targets: dt, alpha: 0.4, yoyo: true, repeat: -1, duration: 400 });
+      } else if (loyaltySaved(it) > 0) {
+        c.setDiscount(true); // brand loyalty: green price chip, the tooltip says how much
       }
       c.on('pointerover', () => c.setDepth(30));
       c.on('pointerout', () => c.setDepth(0));

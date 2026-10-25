@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cars B viewer</title>
+    <link rel="icon" href="data:," />
+    <style>
+      html, body { margin: 0; height: 100%; background: #07060c; overflow: hidden; font: 12px/1.4 ui-monospace, Menlo, monospace; color: #cfcbe0; }
+      #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+      #hud { position: fixed; left: 10px; top: 8px; pointer-events: none; white-space: pre; text-shadow: 0 1px 2px #000; }
+      #help { position: fixed; right: 10px; bottom: 8px; opacity: 0.6; text-align: right; white-space: pre; pointer-events: none; }
+      body.clean #hud, body.clean #help { display: none; }
+    </style>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+    <div id="hud"></div>
+    <div id="help">?body=muscle&amp;tier=stock|street|sport|pro&amp;paragon=hellkat&amp;view=34|side|front|rear|top|wheel|low
+&amp;spin=1&amp;livery=stripes&amp;paint=%23ff0000&amp;number=7&amp;lights=1&amp;nitro=1&amp;wheelie=0.2&amp;steer=0.3&amp;rpm=1&amp;quality=low|medium|high&amp;hud=0
+keys: 1-4 tier, B next body, P next paragon, V next view, S spin, L lights, N nitro, W wheelie, R roll wheels</div>
+    <script type="module" src="./carsB.ts"></script>
+  </body>
+</html>

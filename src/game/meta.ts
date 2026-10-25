@@ -70,6 +70,11 @@ export function setMeta(m: MetaState, persist = false): void {
   if (persist) save();
 }
 
+/** Heat is earned per starting car (Balatro stakes per deck): winning heat N with a car unlocks heat N+1 for that car. */
+export function heatUnlockedFor(carId: string, m: MetaState = meta): number {
+  return Math.max(0, Math.min(MAX_HEAT, (m.bestHeatByCar[carId] ?? -1) + 1));
+}
+
 export function isCarUnlocked(c: StartingCarDef, m: MetaState = meta): boolean {
   if (m.carsUnlocked.includes(c.id)) return true;
   const v = c.unlock.value ?? 0;
@@ -102,11 +107,14 @@ export function recordBossBeaten(round: number): void {
   }
 }
 
-/** Final (round 4) boss beaten. Unlocks heat+1 and records the car's best heat. */
+/** Final (round 4) boss beaten. Records the car's best heat, which unlocks heat+1 for that car only. */
 export function recordRunWon(run: RunState): void {
   meta.runsWon += 1;
+  const before = heatUnlockedFor(run.car);
   meta.heatUnlocked = Math.max(meta.heatUnlocked, Math.min(MAX_HEAT, run.heat + 1));
   meta.bestHeatByCar[run.car] = Math.max(meta.bestHeatByCar[run.car] ?? -1, run.heat);
+  const after = heatUnlockedFor(run.car);
+  if (after > before) run.newHeatUnlock = after;
   syncCars();
   save();
 }

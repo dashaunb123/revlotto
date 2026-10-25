@@ -3,6 +3,7 @@ import type { CarStats, Edition, PackCard, PartDef, ShopItem, SlotId, StatKey, T
 import { EDITION_TEXT, paragonAbility, passiveStatus } from '../../game/effects';
 import { SET_STEPS, brandById, brandCounts } from '../../game/brands';
 import { game } from '../../game/game';
+import { adjustPrice, partPrice } from '../../game/economy';
 import { PAL, RARITY_COLOR, TIER_COLOR, TIER_LABEL } from '../palette';
 import { SLOT_NAME } from '../icons';
 import type { TipLine } from '../ui';
@@ -406,12 +407,32 @@ export function tuningTip(extra: TipLine[] = []): Tip {
 
 export function shopItemTip(item: ShopItem): Tip {
   const price: TipLine[] = ['', { t: `PRICE $${item.price}`, c: PAL.yellow }];
-  if (item.kind === 'part') return offerPartTip(item.partId, item.price);
+  if (item.kind === 'part') {
+    const tip = offerPartTip(item.partId, item.price);
+    const saved = loyaltySaved(item);
+    if (saved > 0) {
+      const brand = game.part(item.partId).brand!;
+      tip.lines.push({ t: `LOYALTY -$${saved} (${brandCounts(game.state.parts)[brand] ?? 0} OWNED)`, c: PAL.green });
+    }
+    return tip;
+  }
   if (item.kind === 'passive') return passiveTip(item.passiveId, price, { edition: item.edition ?? null });
   return consumableTip(item.consumableId, price);
 }
 
+/** $ a part offer is cheaper thanks to brand loyalty (0 for Back Room deals, which show their own 50% OFF). */
+export function loyaltySaved(item: ShopItem): number {
+  if (item.kind !== 'part' || item.deal) return 0;
+  return Math.max(0, adjustPrice(game.state, partPrice(item.partId)) - item.price);
+}
+
 export function packCardTip(card: PackCard): Tip {
+  if (card.kind === 'part' && card.dealer) {
+    const tip = offerPartTip(card.partId);
+    const brand = brandById(game.part(card.partId).brand ?? '');
+    tip.lines.push('', { t: 'DEALER CARD', c: PAL.yellow }, { t: `EVERY PARTS PACK HAS ONE FOR YOUR TOP BRAND (${brand?.name.toUpperCase() ?? ''})`, c: PAL.inkDim });
+    return tip;
+  }
   if (card.kind === 'part') return offerPartTip(card.partId);
   if (card.kind === 'passive') return passiveTip(card.passiveId, [], { edition: card.edition ?? null });
   if (card.kind === 'consumable') return consumableTip(card.consumableId);

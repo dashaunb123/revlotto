@@ -4,6 +4,7 @@ import type { RunPhase } from '../core/types';
 import { game } from '../game/game';
 import { loadLook } from '../game/cosmetics';
 import type { CarLook } from '../render/car';
+import { settings } from '../game/settings';
 
 export const PHASE_SCENE: Record<RunPhase, string> = {
   shop: 'Shop',
@@ -13,6 +14,16 @@ export const PHASE_SCENE: Record<RunPhase, string> = {
   gameover: 'GameOver',
   victory: 'Victory',
 };
+
+/** The race scene for the current render mode: the semi-realistic 3D race, or the original 2D one. */
+export function raceScene(): 'Race' | 'Race3D' {
+  return settings.renderMode() === '3d' ? 'Race3D' : 'Race';
+}
+
+/** The scene for a phase, honouring the render mode for the race. */
+export function sceneForPhase(phase: RunPhase): string {
+  return phase === 'race' ? raceScene() : PHASE_SCENE[phase];
+}
 
 /** The player's look for this run: paint/livery from the Paint Shop, body from the run's starting car. */
 export function runLook(): CarLook {
@@ -89,7 +100,7 @@ async function playBossIntro(from: Phaser.Scene, p: NonNullable<ReturnType<typeo
 
 /** Fade out and start whichever scene matches game.state.phase. */
 export function goToPhase(from: Phaser.Scene, fadeMs = 150): void {
-  const key = PHASE_SCENE[game.state.phase];
+  const key = sceneForPhase(game.state.phase);
   const intro = key === 'Staging' ? pendingCutscene() : null;
   from.cameras.main.fadeOut(fadeMs, 11, 10, 20);
   from.cameras.main.once('camerafadeoutcomplete', () => {

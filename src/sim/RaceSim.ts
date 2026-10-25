@@ -32,6 +32,10 @@ const ROLLING = 0.012;
 /** Clutch-slip floor for normalized rpm at launch. */
 const LAUNCH_RPM = 0.5;
 const IDLE_RPM = 0.13;
+/** Tach flare while the tyres spin (normalized rpm), how fast it rises, and the slowest it settles once they hook. */
+const SPIN_FLARE = 0.12;
+const SPIN_FLARE_RISE_TAU = 0.05;
+const SPIN_FLARE_MIN_FALL = 0.15;
 const REDLINE_ABS = 7500;
 const IDLE_ABS = 900;
 
@@ -158,6 +162,10 @@ export class RaceSim implements IRaceSim {
   private shiftTimer = 0;
   private gradeGearMult = 1; // from last shift grade
   private limiterTime = 0;
+  // Wheelspin tach flare: eases in, and eases out no faster than the true rpm climbs, so the needle never snaps back
+  // mid-gear when the tyres hook (a one-step 12% drop read as a misfire and spoiled shifts timed on the needle).
+  private spinFlare = 0;
+  private rPrev = 0;
   private nitroLeft = 0;
   private nitroUsed = false;
   private finishedResult: RaceResult | null = null;
@@ -448,6 +456,9 @@ export class RaceSim implements IRaceSim {
     const r = s.v / vt;
     s.rpm = Math.max(r, s.gear === 1 && s.launched ? LAUNCH_RPM : IDLE_RPM);
     s.rpmAbs = this.toAbs(s.rpm);
+    // a shift resets the needle to the new gear; any flare starts over from there
+    this.spinFlare = 0;
+    this.rPrev = r;
   }
 
   private physics(dt: number, prevT: number) {
@@ -538,8 +549,12 @@ export class RaceSim implements IRaceSim {
 
     // rpm for display/grading
     const rNow = s.v / vt;
+    const rRise = Math.max(0, (rNow - this.rPrev) / dt);
+    this.rPrev = rNow;
+    if (s.wheelspin) this.spinFlare += (SPIN_FLARE - this.spinFlare) * (1 - Math.exp(-dt / SPIN_FLARE_RISE_TAU));
+    else this.spinFlare = Math.max(0, this.spinFlare - Math.max(SPIN_FLARE_MIN_FALL, 0.8 * rRise) * dt);
     let rpm = Math.max(rNow, s.gear === 1 ? LAUNCH_RPM : IDLE_RPM);
-    if (s.wheelspin) rpm = Math.min(1.0, Math.max(rpm, rpm + 0.12));
+    if (this.spinFlare > 0) rpm = Math.min(1.0, rpm + this.spinFlare);
     if (limiter) rpm = driveOn ? 1.0 : 0.985;
     s.rpm = rpm;
     s.rpmAbs = this.toAbs(rpm);

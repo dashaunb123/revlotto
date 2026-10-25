@@ -15,6 +15,7 @@ import { carVisualFromParts, makeCar } from '../render/car';
 import { recordRaceOnce } from '../game/cosmetics';
 import { brandInfo, paragonOf } from '../render/shop/factory';
 import { activeParagon } from '../game/brands';
+import { ShowcaseSlot, use3D } from '../render/three/showcaseSlot';
 
 const TITLE = 'STRIP KING!';
 const RAINBOW = [PAL.red, PAL.orange, PAL.yellow, PAL.green, PAL.teal, PAL.blue, PAL.purple, PAL.pink];
@@ -82,7 +83,11 @@ export class VictoryScene extends Phaser.Scene {
     });
 
     // final build
-    panel(this, 330, 64, 290, 236);
+    const buildPanel = panel(this, 330, 64, 290, 236);
+    // 3D mode: the hero car on a slow turntable in the bottom of the panel (seamless: its top edge is the panel fill)
+    const slot = use3D()
+      ? new ShowcaseSlot(this, { rect: { x: 332, y: 196, w: 286, h: 102 }, focus: { x: 362, y: 222, w: 226, h: 74 }, after: buildPanel, mode: 'turntable', bg: PAL.panel, glow: PAL.yellow, elevation: 0.17 })
+      : null;
     txt(this, 344, 74, 'FINAL BUILD', 8, PAL.yellow);
     SLOTS.forEach((slot, i) => {
       const ip = s.parts?.[slot];
@@ -132,7 +137,10 @@ export class VictoryScene extends Phaser.Scene {
       this.time.delayedCall(1450, () => burst(this, 528, 270, [PAL.yellow, b?.color ?? PAL.ink, PAL.ink], 30, 120, 50));
     }
     try {
-      const car = makeCar(this, 528, 296, carVisualFromParts(s.parts, runLook()), 2);
+      const visual = carVisualFromParts(s.parts, runLook());
+      const car = makeCar(this, 528, 296, visual, 2);
+      slot?.cover(car);
+      slot?.setCar(visual, 'none');
       this.tweens.add({ targets: car, y: 295, yoyo: true, repeat: -1, duration: 80 });
       this.time.addEvent({ delay: 1400, loop: true, callback: () => car.flameBurst(240) });
     } catch {
@@ -140,15 +148,15 @@ export class VictoryScene extends Phaser.Scene {
     }
 
     // heat line: what was won, what it unlocked
-    const meta = safe(() => game.meta(), null);
+    // heat is earned per car: only announce an unlock this win actually earned for this car
     const carName = safe(() => game.startingCars().find((c) => c.id === s.car)?.name ?? '', '');
-    const unlockedNext = !!meta && s.heat < 8 && meta.heatUnlocked > s.heat;
-    const hl = txt(this, 320, 52, `HEAT ${s.heat} BEATEN${carName ? ` WITH ${carName.toUpperCase()}` : ''}${unlockedNext ? `  -  HEAT ${s.heat + 1} UNLOCKED!` : ''}`, 8, heatColor(Math.max(1, s.heat)), [0.5, 0]).setAlpha(0);
+    const unlocked = s.newHeatUnlock;
+    const hl = txt(this, 320, 52, `HEAT ${s.heat} BEATEN${carName ? ` WITH ${carName.toUpperCase()}` : ''}${unlocked ? `  -  HEAT ${unlocked} UNLOCKED!` : ''}`, 8, heatColor(Math.max(1, s.heat)), [0.5, 0]).setAlpha(0);
     this.time.delayedCall(700, () => {
       hl.setAlpha(1);
       pop(this, hl, 1.3, 260);
     });
-    if (unlockedNext) this.time.delayedCall(3400, () => unlockToast(this, [`Heat ${s.heat + 1}`], 165, 236, () => audio.unlock()));
+    if (unlocked) this.time.delayedCall(3400, () => unlockToast(this, [`Heat ${unlocked}${carName ? ` (${carName})` : ''}`], 165, 236, () => audio.unlock()));
 
     const endless = () => {
       if (this.going) return;

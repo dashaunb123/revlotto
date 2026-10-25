@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Revlotto 3D race FX + camera bench</title>
+    <link rel="icon" href="data:," />
+    <style>
+      html, body { margin: 0; height: 100%; background: #07060c; overflow: hidden; font: 12px/1.4 ui-monospace, Menlo, monospace; color: #cfcbe0; }
+      #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+      #stage { position: relative; aspect-ratio: 16 / 9; width: min(100vw, calc(100vh * 16 / 9)); }
+      #c { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+      /* a mock of the Phaser HUD footprint (tree top-left, ET top-centre, the opaque tach panel at the bottom) */
+      .hud { position: absolute; pointer-events: none; }
+      #hTree { left: 1.25%; top: 2.2%; width: 10%; height: 40.5%; background: rgba(26, 23, 38, 0.92); border: 2px solid #3a3550; box-sizing: border-box; }
+      #hEt { left: 34.7%; top: 1.7%; width: 30.6%; height: 12.8%; background: rgba(36, 32, 54, 0.85); border: 2px solid #4a4466; box-sizing: border-box; }
+      #hBot { left: 0; right: 0; bottom: 0; height: 18%; background: #241f36; border-top: 2px solid #4a4466; }
+      #hTach { position: absolute; left: 11.9%; top: 25%; width: 63.75%; height: 33%; background: linear-gradient(90deg, #2d3b2f 0 70%, #6b8f3a 70% 82%, #9b2f2f 82%); }
+      body.nohud .hud { display: none; }
+      #info { position: fixed; left: 8px; bottom: 6px; white-space: pre; pointer-events: none; text-shadow: 0 1px 2px #000; opacity: 0.85; }
+      body.clean #info { display: none; }
+    </style>
+  </head>
+  <body>
+    <div id="wrap">
+      <div id="stage">
+        <canvas id="c"></canvas>
+        <div class="hud" id="hTree"></div>
+        <div class="hud" id="hEt"></div>
+        <div class="hud" id="hBot"><div id="hTach"></div></div>
+      </div>
+    </div>
+    <div id="info"></div>
+    <script type="module" src="./fx.ts"></script>
+  </body>
+</html>

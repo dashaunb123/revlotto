@@ -39,8 +39,8 @@ export interface GameApi {
 
   // Meta + run-setup content
   meta(): MetaState; // read-only meta progression
-  startingCars(): StartingCarDef[]; // with unlocked / bestHeat filled
-  heatLevels(): HeatDef[]; // with unlocked filled
+  startingCars(): StartingCarDef[]; // with unlocked / bestHeat / maxHeat filled
+  heatLevels(car?: string): HeatDef[]; // with unlocked filled for that car (heat is earned per car); no car = any car
   tag(id: string): TagDef;
   garageUpgrade(id: string): GarageDef;
   boss(id: string): BossDef;

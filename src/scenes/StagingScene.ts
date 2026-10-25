@@ -14,7 +14,8 @@ import { RARITY_COLOR } from '../render/palette';
 import { brandInfo, brandLogo, ownedBrands, paragonOf } from '../render/shop/factory';
 import { paragonTip, brandTip } from '../render/shop/describe';
 import { paragonAbility } from '../game/effects';
-import { goToPhase, runLook } from './nav';
+import { goToPhase, raceScene, runLook } from './nav';
+import { ShowcaseSlot, use3D } from '../render/three/showcaseSlot';
 
 const STATS: { key: StatKey; label: string; fmt: (v: number) => string }[] = [
   { key: 'power', label: 'POWER', fmt: (v) => String(Math.round(v)) },
@@ -101,12 +102,20 @@ export class StagingScene extends Phaser.Scene {
     }
 
     // ---- opponent card ----
-    panel(this, 12, 52, 300, 152, PAL.panel, boss ? PAL.red : PAL.panelEdge);
+    const opPanel = panel(this, 12, 52, 300, 152, PAL.panel, boss ? PAL.red : PAL.panelEdge);
+    // 3D mode: both cars as studio showcases behind their panels, facing each other (pixel cars stay as the fallback)
+    const show3d = use3D();
+    const opSlot = show3d
+      ? new ShowcaseSlot(this, { rect: { x: 14, y: 54, w: 296, h: 148 }, focus: { x: 40, y: 84, w: 244, h: 64 }, after: opPanel, bg: PAL.panel, glow: boss ? PAL.red : parseInt(op.car.color.slice(1), 16), facing: 'right' })
+      : null;
     txt(this, 24, 60, boss ? (final ? 'FINAL BOSS' : 'BOSS') : 'OPPONENT', 8, boss ? PAL.red : PAL.inkDim);
     const name = op.name.toUpperCase();
     txt(this, 24, 72, name, name.length <= 17 ? 16 : 8, PAL.ink).setDepth(10).setShadow(2, 2, '#07060d', 0, false, true);
-    const opCar = makeCar(this, 162, 136, carVisualForOpponent(op), 2);
+    const opVisual = carVisualForOpponent(op);
+    const opCar = makeCar(this, 162, 136, opVisual, 2);
     opCar.setWheelSpin(0);
+    opSlot?.cover(opCar);
+    opSlot?.setCar(opVisual, 'none');
     this.tweens.add({ targets: opCar, y: 135, duration: 120, yoyo: true, repeat: -1, repeatDelay: 600 });
     if (op.taunt) {
       this.add
@@ -126,10 +135,16 @@ export class StagingScene extends Phaser.Scene {
     this.tweens.add({ targets: et, scale: 1, duration: 260, delay: 120, ease: 'Back.easeOut' });
 
     // ---- your car ----
-    panel(this, 328, 52, 300, 152);
+    const mePanel = panel(this, 328, 52, 300, 152);
+    const meSlot = show3d
+      ? new ShowcaseSlot(this, { rect: { x: 330, y: 54, w: 296, h: 148 }, focus: { x: 356, y: 70, w: 244, h: 70 }, after: mePanel, bg: PAL.panel, glow: 0x6a58b8, facing: 'left' })
+      : null;
     txt(this, 340, 60, 'YOUR CAR', 8, PAL.inkDim).setDepth(10);
-    const me = makeCar(this, 478, 134, carVisualFromParts(s.parts, runLook()), 2);
+    const meVisual = carVisualFromParts(s.parts, runLook());
+    const me = makeCar(this, 478, 134, meVisual, 2);
     me.setWheelSpin(0);
+    meSlot?.cover(me);
+    meSlot?.setCar(meVisual, 'none');
     this.makeBrandBadge();
     this.tweens.add({ targets: me, y: 133, duration: 100, yoyo: true, repeat: -1, repeatDelay: 400 });
     this.hintText = txt(this, 340, 142, this.consLabel(), 8, PAL.inkDim);
@@ -646,7 +661,7 @@ export class StagingScene extends Phaser.Scene {
     this.cameras.main.shake(150, 0.006);
     this.time.delayedCall(140, () => {
       this.cameras.main.fadeOut(160, 11, 10, 20);
-      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Race', { setup }));
+      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(raceScene(), { setup }));
     });
   }
 }

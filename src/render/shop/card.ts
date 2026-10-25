@@ -13,6 +13,7 @@ export interface CardSpec {
   iconScale?: number; // default 2
   name?: string; // wrapped below the icon
   price?: number | null; // price chip on top; 0 shows FREE
+  discount?: boolean; // price is discounted (brand loyalty): green chip
   corner?: string; // small corner label (e.g. passive order)
   fill?: number;
   edition?: string | null; // 'foil' | 'holo' | 'chrome': tinted frame, moving sheen, label chip
@@ -263,12 +264,19 @@ export class Card extends Phaser.GameObjects.Container {
   private drawChip() {
     if (!this.chipG || !this.chip) return;
     const cw = this.chip.getData('w') as number;
-    const col = this.dim ? PAL.red : this.spec.price === 0 ? PAL.green : PAL.yellow;
+    const col = this.dim ? PAL.red : this.spec.price === 0 || this.spec.discount ? PAL.green : PAL.yellow;
     this.chipG.clear();
     this.chipG.fillStyle(PAL.bgDeep, 1).fillRect(-cw / 2 + 1, -6 + 2, cw, 12);
     this.chipG.fillStyle(col, 1).fillRect(-cw / 2, -6, cw, 12);
     this.chipG.fillStyle(0xffffff, 0.35).fillRect(-cw / 2, -6, cw, 1);
     this.chipT?.setColor(hex(this.dim ? PAL.ink : PAL.bgDeep));
+  }
+
+  /** Discounted price (brand loyalty): green chip. */
+  setDiscount(on: boolean): this {
+    this.spec.discount = on;
+    this.drawChip();
+    return this;
   }
 
   /** Can't afford / unavailable: dim the art, redden the price. */

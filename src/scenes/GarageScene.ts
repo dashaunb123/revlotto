@@ -16,6 +16,7 @@ import { Tooltip, burst, button, panel, pop, sfx, shadowTxt, shake, toast, txt, 
 import { ensureTextures } from '../render/icons';
 import { carVisualFromParts, makeCar, type CarLook, type CarSprite } from '../render/car';
 import { DEFAULT_ENGINE_PROFILE, engineProfileFromParts, revBlip, unlockAudio } from '../render/audio';
+import { ShowcaseSlot, use3D } from '../render/three/showcaseSlot';
 import {
   CATALOG,
   KIND_LABEL,
@@ -61,6 +62,8 @@ export class GarageScene extends Phaser.Scene {
   private numText!: Phaser.GameObjects.Text;
   private countText!: Phaser.GameObjects.Text;
   private leaving = false;
+  /** 3D mode: a big turntable showcase in the preview (drag to spin); the pixel car stays as the fallback. */
+  private slot: ShowcaseSlot | null = null;
 
   constructor() {
     super('Garage');
@@ -76,6 +79,7 @@ export class GarageScene extends Phaser.Scene {
     this.headVal = {};
     this.car = null;
     this.leaving = false;
+    this.slot = null;
     this.look = loadLook();
     ensureTextures(this);
     this.cameras.main.fadeIn(180, 11, 10, 20);
@@ -127,6 +131,18 @@ export class GarageScene extends Phaser.Scene {
     g.fillStyle(PAL.yellow, 0.05).fillTriangle(PREVIEW.x, 36, PREVIEW.x - 90, PREVIEW.y + 6, PREVIEW.x + 90, PREVIEW.y + 6);
     g.fillStyle(PAL.yellow, 0.08).fillEllipse(PREVIEW.x, PREVIEW.y + 2, 280, 18);
     g.fillStyle(PAL.ink, 1).fillRect(PREVIEW.x - 10, 36, 20, 4);
+    if (use3D())
+      this.slot = new ShowcaseSlot(this, {
+        rect: { x: 10, y: 36, w: 388, h: 176 },
+        focus: { x: 20, y: 74, w: 368, h: 132 },
+        after: g,
+        mode: 'turntable',
+        drag: true,
+        bg: 0x1c1830,
+        glow: PAL.yellow,
+        elevation: 0.24,
+        fov: 28,
+      });
     // name plate
     this.plateName = shadowTxt(this, 18, 44, '', 16, PAL.ink);
     this.plateSub = txt(this, 18, 64, '', 8, PAL.inkDim);
@@ -136,9 +152,12 @@ export class GarageScene extends Phaser.Scene {
     this.car?.destroy();
     this.car = null;
     try {
-      const car = makeCar(this, PREVIEW.x, PREVIEW.y, carVisualFromParts(game.state.parts, this.look, { paragon: false }), 3);
+      const visual = carVisualFromParts(game.state.parts, this.look, { paragon: false });
+      const car = makeCar(this, PREVIEW.x, PREVIEW.y, visual, 3);
       car.setDepth(5);
       this.car = car;
+      this.slot?.cover(car);
+      this.slot?.setCar(visual, rev ? 'swap' : 'pulse');
       this.tweens.add({ targets: car, y: PREVIEW.y - 1, duration: 90, yoyo: true, repeat: -1, repeatDelay: 600 });
       if (juice) {
         pop(this, car, 1.12, 280);

@@ -1,4 +1,5 @@
-// NEW RUN: pick a starting car (Balatro decks) and a heat level (stakes), optionally type a seed.
+// NEW RUN: pick a starting car (Balatro decks) and a heat level (stakes), optionally type a seed. Like stakes per deck,
+// heat is earned per car: winning heat N with a car unlocks heat N+1 for that car only.
 //
 // LAYOUT (640x360)
 //   BACK (8,8,56,16)     "NEW RUN" 24px centered y 20                       best endless (right, y 12)
@@ -78,11 +79,12 @@ export class RunSetupScene extends Phaser.Scene {
 
     this.cars = safe(() => game.startingCars(), []);
     this.heats = safe(() => game.heatLevels(), []).slice().sort((a, b) => a.level - b.level);
-    this.maxHeat = Math.max(0, ...this.heats.filter((h) => h.unlocked !== false).map((h) => h.level));
     const pref = loadPref();
     const prefIdx = this.cars.findIndex((c) => c.id === pref.car && c.unlocked !== false);
     this.sel = prefIdx >= 0 ? prefIdx : Math.max(0, this.cars.findIndex((c) => c.unlocked !== false));
-    this.heat = Phaser.Math.Clamp(pref.heat ?? 0, 0, this.maxHeat);
+    // heat is earned per car (Balatro stakes per deck): the selector is gated by the selected car's own progress
+    this.maxHeat = this.cars[this.sel]?.maxHeat ?? 0;
+    this.heat = Phaser.Math.Clamp(pref.heatByCar?.[this.cars[this.sel]?.id ?? ''] ?? pref.heat ?? 0, 0, this.maxHeat);
 
     // background: checker floor + a warm glow that scales with heat
     this.add.rectangle(0, 0, GAME_W, GAME_H, PAL.bg).setOrigin(0, 0);
@@ -192,7 +194,14 @@ export class RunSetupScene extends Phaser.Scene {
 
   private select(i: number, juice: boolean) {
     if (!this.cars.length) return;
+    const prevSel = this.sel;
     this.sel = (i + this.cars.length) % this.cars.length;
+    // each car carries its own heat progress: re-gate the selector, and restore the heat last played with this car
+    const car = this.cars[this.sel];
+    this.maxHeat = car?.unlocked === false ? 0 : car?.maxHeat ?? 0;
+    if (this.sel !== prevSel) this.heat = Phaser.Math.Clamp(loadPref().heatByCar?.[car?.id ?? ''] ?? this.heat, 0, this.maxHeat);
+    else this.heat = Math.min(this.heat, this.maxHeat);
+    if (this.heatObjs.length) this.drawHeat(false);
     const baseY = CARD_Y + CARD_H / 2;
     this.cardConts.forEach((cont, k) => {
       const on = k === this.sel;
@@ -294,7 +303,13 @@ export class RunSetupScene extends Phaser.Scene {
     if (juice) pop(this, num, 1.6, 260);
     const def = this.heats.find((d) => d.level === h);
     o.push(txt(this, 366, 166, (def?.name ?? `Heat ${h}`).toUpperCase(), 8, col));
-    o.push(txt(this, 366, 178, this.maxHeat > 0 ? `MAX UNLOCKED ${this.maxHeat}` : 'WIN A RUN: HEAT 1', 8, PAL.inkDim));
+    const next =
+      this.cars[this.sel]?.unlocked === false
+        ? 'UNLOCK THIS CAR FIRST'
+        : this.maxHeat >= 8
+          ? 'THIS CAR: ALL HEATS UNLOCKED'
+          : `WIN HEAT ${this.maxHeat} WITH IT: UNLOCK ${this.maxHeat + 1}`;
+    o.push(txt(this, 366, 178, next, 8, PAL.inkDim));
     // cumulative rules
     const rules = this.heats.filter((d) => d.level > 0);
     rules.forEach((d, k) => {
@@ -388,16 +403,22 @@ function toastLocked(scene: Phaser.Scene, target: Phaser.GameObjects.Container) 
   scene.tweens.add({ targets: t, alpha: 0, y: 288, delay: 700, duration: 300, onComplete: () => t.destroy() });
 }
 
-function loadPref(): { car?: string; heat?: number } {
+type Pref = { car?: string; heat?: number; heatByCar?: Record<string, number> };
+
+function loadPref(): Pref {
   try {
     return JSON.parse(localStorage.getItem(PREF_KEY) ?? '{}') ?? {};
   } catch {
     return {};
   }
 }
+/** Last car + heat, and the last heat picked per car (restored when switching cars). */
 function savePref(p: { car?: string; heat?: number }) {
   try {
-    localStorage.setItem(PREF_KEY, JSON.stringify(p));
+    const old = loadPref();
+    const heatByCar = { ...(old.heatByCar ?? {}) };
+    if (p.car && typeof p.heat === 'number') heatByCar[p.car] = p.heat;
+    localStorage.setItem(PREF_KEY, JSON.stringify({ ...p, heatByCar }));
   } catch {
     /* private mode */
   }

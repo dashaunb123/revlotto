@@ -4,10 +4,15 @@ import path from 'node:path';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/(\w:)/, '$1')), '..');
 const OWNERS = {
-  p_core: ['src/core', 'src/game/game.ts', 'src/game/run.ts', 'src/game/shop.ts', 'src/game/economy.ts', 'src/game/stats.ts', 'src/game/brands.ts', 'src/data/parts.json', 'src/data/brands.json', 'src/data/balance.json', 'src/data/content.ts'],
-  p_abilities: ['src/game/effects.ts', 'src/render/shop/describe.ts', 'src/render/icons.ts'],
-  p_visual: ['src/render/car.ts', 'src/render/audio.ts', 'src/render/race/dev'],
-  p_ui: ['src/scenes/ShopScene.ts', 'src/scenes/StagingScene.ts', 'src/scenes/ResultScene.ts', 'src/scenes/VictoryScene.ts', 'src/render/shop/card.ts', 'src/render/shop/factory.ts', 'src/render/shop/packOverlay.ts', 'src/render/ui.ts'],
+  d3_core: ['src/scenes/Race3DScene.ts', 'src/render/three/renderer.ts', 'src/render/three/race/world.ts', 'src/render/three/race/hazards.ts'],
+  d3_cine: ['src/render/three/race/camera.ts', 'src/render/three/race/fx.ts'],
+  d3_env: ['src/render/three/env'],
+  d3_look: ['src/render/three/materials.ts', 'src/render/three/post.ts', 'src/render/three/lighting.ts'],
+  d3_carsA: ['src/render/three/cars/bodies/compact.ts', 'src/render/three/cars/bodies/sedan.ts', 'src/render/three/cars/bodies/hatch.ts', 'src/render/three/cars/bodies/truck.ts'],
+  d3_carsB: ['src/render/three/cars/bodies/muscle.ts', 'src/render/three/cars/bodies/brick.ts', 'src/render/three/cars/bodies/widebody.ts', 'src/render/three/cars/bodies/super.ts'],
+  d3_carsC: ['src/render/three/cars/bodies/tuner.ts', 'src/render/three/cars/bodies/wedge.ts', 'src/render/three/cars/bodies/hyper.ts'],
+  d3_kit: ['src/render/three/cars/index.ts', 'src/render/three/cars/kit'],
+  d3_show: ['src/render/three/showcase.ts', 'src/scenes/TitleScene.ts'],
 };
 
 function walk(rel, out) {

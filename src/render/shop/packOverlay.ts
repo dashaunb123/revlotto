@@ -17,6 +17,7 @@ import { paragonAbility } from '../../game/effects';
 import { carVisualFromParts, makeCar, type CarLook, type CarSprite } from '../car';
 import { sfx as audio } from '../audio';
 import { packCardTip, shortDesc } from './describe';
+import { ShowcaseSlot, use3D } from '../three/showcaseSlot';
 
 export const OVERLAY_TOP = 120;
 const cardX = (i: number, n: number) => Math.round(320 + (i - (n - 1) / 2) * Math.min(140, 560 / Math.max(1, n)));
@@ -109,6 +110,13 @@ export class PackOverlay {
     const n = this.packCards.length;
     this.packCards.forEach((pc, i) => {
       const c = packCardCard(s, animate ? 320 : cardX(i, n), CARD_Y, pc).setDepth(DEPTH + 2);
+      if (pc.kind === 'part' && pc.dealer) {
+        // Dealer: the guaranteed card of your top brand
+        const g = s.add.graphics();
+        g.fillStyle(PAL.bgDeep, 1).fillRect(-31, 35, 64, 12);
+        g.fillStyle(PAL.yellow, 1).fillRect(-32, 34, 64, 12);
+        c.add([g, txt(s, 0, 40, 'DEALER', 8, PAL.bgDeep, [0.5, 0.5])]);
+      }
       this.cards.push(c);
       const d = txt(s, cardX(i, n), 282, wrap(shortDesc(pc).toUpperCase(), 16, 4), 8, PAL.ink, [0.5, 0])
         .setAlign('center')
@@ -280,6 +288,8 @@ export class ParagonTransform {
   private done = false;
   private keyFns: [string, () => void][] = [];
   private updateFn: ((t: number, dt: number) => void) | null = null;
+  /** 3D mode: the whole moment plays in a full-screen showcase under the words and confetti. */
+  private slot: ShowcaseSlot | null = null;
 
   constructor(
     private scene: Phaser.Scene,
@@ -309,6 +319,20 @@ export class ParagonTransform {
     scrim.setInteractive();
     scrim.on('pointerup', () => this.finish());
     s.tweens.add({ targets: scrim, alpha: 0.92, duration: 260 });
+    // 3D mode: the old car heats up in a dark studio with brand-coloured rays, then the paragon spins in under light.
+    // The 2D rays / glow / white-hot box / pixel cars below are covered while the 3D one is up (and stay as the fallback).
+    const slot = use3D()
+      ? new ShowcaseSlot(s, { rect: { x: 0, y: 0, w: GAME_W, h: GAME_H }, focus: { x: 190, y: 118, w: 260, h: 104 }, depth: TF_DEPTH + 0.5, mode: 'reveal', bg: PAL.bgDeep, glow: col, layer: 10, holeAlpha: 0 })
+      : null;
+    this.slot = slot;
+    let hit = false;
+    if (slot) {
+      add(slot.hole);
+      s.tweens.add({ targets: slot.hole, alpha: 1, duration: 260 });
+      slot.setCar(carVisualFromParts(oldParts, look), 'none');
+      slot.prepare(carVisualFromParts(newParts, look)); // the paragon builds + compiles during the build-up
+      slot.onReady(() => slot.car3d?.enter(0.5));
+    }
 
     // spinning light rays behind the car
     const rays = add(s.add.graphics().setDepth(TF_DEPTH + 1).setPosition(STAGE.x, STAGE.y).setAlpha(0));
@@ -347,6 +371,7 @@ export class ParagonTransform {
     }
     // white-hot overlay over the car (the car "glows" by being washed out in light)
     const hot = add(s.add.graphics().setDepth(TF_DEPTH + 4).setPosition(STAGE.x, STAGE.y - 14).setAlpha(0));
+    slot?.cover(rays, glow, oldCar, hot);
     hot.fillStyle(0xffffff, 1).fillRect(-90, -26, 180, 52);
     hot.fillStyle(0xffffff, 0.5).fillRect(-104, -32, 208, 64);
     s.tweens.add({ targets: hot, alpha: { from: 0, to: 0.85 }, delay: 700, duration: HIT_MS - 700, ease: 'Expo.easeIn' });
@@ -361,6 +386,12 @@ export class ParagonTransform {
     let flick = 0;
     this.updateFn = (_t, dt) => {
       drawGlow(glowState.r, col, glowState.a);
+      const sc = slot?.car3d;
+      if (sc) {
+        sc.setRays(rays.alpha);
+        sc.setHeat(hot.alpha);
+        sc.setShake(hit ? 0 : shakeState.amp);
+      }
       flick += dt;
       if (oldCar && oldCar.active && this.timers.length && flick > 30) {
         flick = 0;
@@ -377,6 +408,8 @@ export class ParagonTransform {
 
     // ---- the hit ----
     at(HIT_MS, () => {
+      hit = true;
+      slot?.setCar(carVisualFromParts(newParts, look), 'reveal');
       s.cameras.main.flash(260, 255, 255, 255);
       s.cameras.main.shake(380, 0.018);
       if (oldCar) oldCar.setVisible(false);
@@ -397,6 +430,7 @@ export class ParagonTransform {
       });
       try {
         const car = add(makeCar(s, STAGE.x, STAGE.y, carVisualFromParts(newParts, look), 3).setDepth(TF_DEPTH + 3));
+        slot?.cover(car);
         car.setScale(4.6);
         s.tweens.add({ targets: car, scale: 3, duration: 420, ease: 'Back.easeOut' });
         s.tweens.add({ targets: car, y: STAGE.y - 1, duration: 70, yoyo: true, repeat: -1, repeatDelay: 40, delay: 450 });
@@ -492,11 +526,19 @@ export class ParagonTransform {
     this.timers = [];
     const objs = this.objs;
     this.objs = [];
+    // the 3D frame fades out with the rest; the shop's own showcases draw over it again meanwhile
+    const sc = this.slot?.car3d;
+    if (sc) sc.layer = -1;
+    const slot = this.slot;
+    this.slot = null;
     s.tweens.add({
       targets: objs,
       alpha: 0,
       duration: 220,
-      onComplete: () => objs.forEach((o) => o.destroy()),
+      onComplete: () => {
+        objs.forEach((o) => o.destroy());
+        slot?.dispose();
+      },
     });
     this.cleanup();
     s.time.delayedCall(60, () => this.onDone());
@@ -512,6 +554,8 @@ export class ParagonTransform {
       for (const t of this.timers) t.remove(false);
       for (const o of this.objs) o.destroy();
       this.objs = [];
+      this.slot?.dispose();
+      this.slot = null;
     }
   }
 }

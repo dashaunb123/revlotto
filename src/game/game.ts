@@ -46,6 +46,7 @@ import { activeParagon, brandCounts } from './brands';
 import {
   discoverPassive,
   getMeta,
+  heatUnlockedFor,
   isCarUnlocked,
   recordBossBeaten,
   recordEndlessRound,
@@ -182,6 +183,7 @@ function installPart(partId: string): number {
     runNotes.push(`PARAGON: ${brandById(paragonAfter)?.paragon.name.toUpperCase() ?? paragonAfter}`);
   }
   if (replaced) fireRunHook((h, c) => h.onSell?.('part', c));
+  if (s.shop) repriceShop(s, s.shop); // brand loyalty discounts follow what's installed
   return refund;
 }
 
@@ -359,12 +361,14 @@ export const game: RevlottoGame = {
       ...c,
       unlocked: isCarUnlocked(c, m),
       bestHeat: m.bestHeatByCar[c.id] ?? null,
+      maxHeat: heatUnlockedFor(c.id, m),
       bestEndlessRound: m.bestEndlessRoundByCar[c.id] ?? 0,
     }));
   },
-  heatLevels() {
+  heatLevels(car) {
     const m = getMeta();
-    return CONTENT.heat.map((h) => ({ ...h, unlocked: h.level <= m.heatUnlocked }));
+    const max = car ? heatUnlockedFor(car, m) : m.heatUnlocked;
+    return CONTENT.heat.map((h) => ({ ...h, unlocked: h.level <= max }));
   },
 
   // ---------- Shop ----------
@@ -513,6 +517,7 @@ export const game: RevlottoGame = {
     s.cash += partSellValueById(ip.partId);
     s.parts[slot] = { partId: stockPart(slot).id, level: 0 };
     fireRunHook((h, c) => h.onSell?.('part', c));
+    if (s.shop) repriceShop(s, s.shop);
     commit();
     return OK;
   },

@@ -1,17 +1,19 @@
 {
   "starter": { "power": 200, "grip": 1.0, "weight": 1400, "gearing": 1.0, "drag": 1.0, "shiftWindow": 1.0, "nitroPower": 0, "nitroDuration": 0 },
   "economy": { "startCash": 10, "regularWin": 6, "bossWin": 12, "timeBonusPerTenth": 1, "timeBonusCap": 4, "sellRatio": 0.5 },
-  "prices": { "street": 6, "sport": 10, "pro": 15, "partsPack": 6, "powerPack": 8, "passive": 8, "consumable": 3, "rerollBase": 3, "rerollStep": 1 },
+  "prices": { "street": 6, "sport": 10, "pro": 12, "partsPack": 6, "powerPack": 8, "passive": 8, "consumable": 3, "rerollBase": 3, "rerollStep": 1 },
   "shop": {
     "tierOdds": [
-      { "street": 0.75, "sport": 0.25, "pro": 0 },
-      { "street": 0.45, "sport": 0.45, "pro": 0.1 },
-      { "street": 0.2, "sport": 0.5, "pro": 0.3 },
+      { "street": 0.675, "sport": 0.225, "pro": 0.1 },
+      { "street": 0.375, "sport": 0.375, "pro": 0.25 },
+      { "street": 0.16, "sport": 0.39, "pro": 0.45 },
       { "street": 0.1, "sport": 0.4, "pro": 0.5 }
     ],
     "brandBias": 2,
     "loyaltyBias": 2,
     "loyaltyBias2": 4,
+    "dealerMin": 2,
+    "loyaltyPerPart": 1,
     "powerPackOdds": { "passive": 0.5, "consumable": 0.4, "tuning": 0.1 },
     "rarityWeights": { "common": 1, "uncommon": 0.6, "rare": 0.2 }
   },

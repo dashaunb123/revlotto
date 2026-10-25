@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Revlotto 3D look dev</title>
+    <link rel="icon" href="data:," />
+    <style>
+      html, body { margin: 0; height: 100%; background: #07060c; overflow: hidden; font: 12px/1.4 ui-monospace, Menlo, monospace; color: #cfcbe0; }
+      #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+      #hud { position: fixed; left: 10px; top: 8px; pointer-events: none; white-space: pre; text-shadow: 0 1px 2px #000; }
+      body.clean #hud { display: none; }
+    </style>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+    <div id="hud"></div>
+    <script type="module" src="./look.ts"></script>
+  </body>
+</html>

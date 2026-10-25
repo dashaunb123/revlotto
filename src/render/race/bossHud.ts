@@ -34,6 +34,7 @@ export class BossHud {
   private hud: Phaser.GameObjects.Layer;
   private g: Phaser.GameObjects.Graphics;
   private gust?: GustFx;
+  private hasGust = false;
   private banner?: Phaser.GameObjects.Container;
   private oilTag?: Phaser.GameObjects.Text;
   private gustTag?: Phaser.GameObjects.Text;
@@ -42,8 +43,11 @@ export class BossHud {
   private gustWas = 0;
   private shift = 0;
 
-  /** rearOffsetPx: player rear contact world x minus state.x * PPM (the car's real geometry). */
-  constructor(scene: Phaser.Scene, sim: RaceSim, hud: Phaser.GameObjects.Layer, track: Track, tach: Tach, rearOffsetPx: number) {
+  /**
+   * rearOffsetPx: player rear contact world x minus state.x * PPM (the car's real geometry).
+   * opts.gustStreaks: false skips the 2D gust front + streaks (the 3D race draws its own); meter and tag stay.
+   */
+  constructor(scene: Phaser.Scene, sim: RaceSim, hud: Phaser.GameObjects.Layer, track: Track, tach: Tach, rearOffsetPx: number, opts: { gustStreaks?: boolean } = {}) {
     this.scene = scene;
     this.sim = sim;
     this.hud = hud;
@@ -61,7 +65,8 @@ export class BossHud {
       hud.add(this.oilTag);
     }
     if (hz.gusts.length) {
-      this.gust = new GustFx(scene, hud);
+      this.hasGust = true;
+      if (opts.gustStreaks !== false) this.gust = new GustFx(scene, hud);
       hud.add(txt(scene, 226, METER.y - 4, 'WIND', 8, GUST_COLOR));
       this.gustTag = fxText(scene, 320, 84, '', 8, GUST_COLOR, 3);
       hud.add(this.gustTag);
@@ -89,7 +94,7 @@ export class BossHud {
 
   /** Y for the distance-split popups (moved down when the gust meter sits under the ET box). */
   get splitY(): number {
-    return this.gust ? 76 : 66;
+    return this.hasGust ? 76 : 66;
   }
 
   private hideBanner() {
@@ -125,12 +130,12 @@ export class BossHud {
     }
 
     // ---- gusts: front rolling in + meter ----
-    if (this.gust) {
+    if (this.hasGust) {
       const str = gustAt(hz, s.t);
       const until = s.phase === 'running' ? untilSpan(hz.gusts, s.t) : Infinity;
       let front: number | null = null;
       if (until > 0 && until < GUST_WARN) front = playerScreenX + (until / GUST_WARN) * (700 - playerScreenX);
-      this.gust.update(dtMs, s.phase === 'finished' ? null : front, s.phase === 'finished' ? 0 : str);
+      this.gust?.update(dtMs, s.phase === 'finished' ? null : front, s.phase === 'finished' ? 0 : str);
       if (str > 0.5 && this.gustWas <= 0.5) {
         this.scene.cameras.main.shake(260, 0.004);
       }

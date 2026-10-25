@@ -174,13 +174,14 @@ export interface StartingCarDef {
   unlock: { kind: 'free' | 'beat_round' | 'win_run' | 'win_heat'; value?: number };
   unlocked?: boolean; // filled by game.startingCars()
   bestHeat?: number | null; // filled by game.startingCars(): highest heat won with this car (sticker)
+  maxHeat?: number; // filled by game.startingCars(): highest heat selectable with this car (heat is earned per car)
   bestEndlessRound?: number; // filled by game.startingCars()
 }
 
 /** Meta progression across runs (src/game/meta.ts, localStorage 'revlotto_meta'). */
 export interface MetaState {
   version: 1;
-  heatUnlocked: number; // highest selectable heat (0..8)
+  heatUnlocked: number; // highest heat unlocked on ANY car (summary only; selection is per car, see heatUnlockedFor)
   bestHeatByCar: Record<string, number>; // highest heat WON per starting car
   carsUnlocked: string[];
   runsPlayed: number;
@@ -366,7 +367,7 @@ export interface ShopPack {
 }
 
 export type PackCard =
-  | { kind: 'part'; partId: string }
+  | { kind: 'part'; partId: string; dealer?: boolean } // dealer: the guaranteed card of your brand
   | { kind: 'passive'; passiveId: string; edition?: Edition | null }
   | { kind: 'consumable'; consumableId: string }
   | { kind: 'tuning' };
@@ -412,6 +413,8 @@ export interface RunState {
   endless: boolean; // true after continueEndless()
   /** Set once this run has pushed meta's best endless round higher (a tie doesn't count). */
   newEndlessRecord?: boolean;
+  /** Set when winning this run unlocked a new heat for its car (the heat number now selectable). */
+  newHeatUnlock?: number;
   bosses: string[]; // BossDef ids drawn per round: bosses[round - 1]
   tags: string[]; // held tags (TagDef ids) waiting to trigger
   garage: string[]; // owned GarageDef ids

@@ -41,6 +41,10 @@ export interface Balance {
     /** Brand Loyalty garage upgrades: brandBias added. */
     loyaltyBias: number;
     loyaltyBias2: number;
+    /** Dealer: your most-installed brand with at least this many parts always gets a card in every Parts Pack. */
+    dealerMin: number;
+    /** Loyalty discount: $ off a brand's parts per installed part of that brand (to half price, never below resale). */
+    loyaltyPerPart: number;
     powerPackOdds: { passive: number; consumable: number; tuning: number };
     rarityWeights: { common: number; uncommon: number; rare: number };
   };
@@ -159,6 +163,8 @@ const balanceSchema = z.object({
     brandBias: num,
     loyaltyBias: num,
     loyaltyBias2: num,
+    dealerMin: num.default(2),
+    loyaltyPerPart: num.default(1),
     powerPackOdds: z.object({ passive: num, consumable: num, tuning: num }),
     rarityWeights: z.object({ common: num, uncommon: num, rare: num }),
   }),

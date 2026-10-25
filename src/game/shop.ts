@@ -11,6 +11,7 @@ import {
   owns,
   packPrice,
   partPrice,
+  partSellValueById,
   passivePrice,
   rerollPrice,
 } from './economy';
@@ -30,10 +31,14 @@ export function rollEdition(rng: Rng): Edition | null {
   return null;
 }
 
-/** Current price of a loose shop item for this run (garage discounts, Trust Fund, Back Room deal). */
+/** Current price of a loose shop item for this run (garage discounts, Trust Fund, brand loyalty, Back Room deal). */
 export function itemPrice(state: RunState, it: ShopItem): number {
   if (it.kind === 'part') {
-    const p = adjustPrice(state, partPrice(it.partId));
+    const base = partPrice(it.partId);
+    const full = adjustPrice(state, base);
+    const off = loyaltyOff(state, it.partId);
+    // Never below resale + $1, so loyalty + garage discounts can't be farmed by buy-and-sell.
+    const p = off ? Math.min(full, Math.max(partSellValueById(it.partId) + 1, adjustPrice(state, base - off))) : full;
     return it.deal ? Math.max(1, Math.floor(p / 2)) : p;
   }
   if (it.kind === 'passive') return adjustPrice(state, passivePrice(it.passiveId) + editionPrice(it.edition));
@@ -108,6 +113,32 @@ function ownedByBrand(state: RunState): Record<string, number> {
     if (b) out[b] = (out[b] ?? 0) + 1;
   }
   return out;
+}
+
+/** Brand loyalty: $ off a part for each installed part of its brand, up to half its base price. */
+export function loyaltyOff(state: RunState, partId: string): number {
+  const p = CONTENT.parts.find((x) => x.id === partId);
+  if (!p?.brand) return 0;
+  const n = ownedByBrand(state)[p.brand] ?? 0;
+  return Math.min(n * CONTENT.balance.shop.loyaltyPerPart, Math.floor(partPrice(partId) / 2));
+}
+
+/** Dealer brand: your most-installed brand with >= dealerMin parts (ties: higher tier, then brand order). */
+export function dealerBrand(state: RunState): string | null {
+  const owned = ownedByBrand(state);
+  let best: string | null = null;
+  let bestN = CONTENT.balance.shop.dealerMin - 1;
+  let bestRank = -1;
+  for (const b of CONTENT.brands) {
+    const n = owned[b.id] ?? 0;
+    const rank = TIER_RANK[b.tier];
+    if (n > bestN || (n === bestN && best && rank > bestRank)) {
+      best = b.id;
+      bestN = n;
+      bestRank = rank;
+    }
+  }
+  return best;
 }
 
 /**
@@ -272,7 +303,32 @@ export function rollPartsPack(state: RunState, rng: Rng): PackCard[] {
     slots.add(p.slot);
     cards.push({ kind: 'part', partId: p.id });
   }
+  addDealerCard(state, rng, cards);
   return cards;
+}
+
+/**
+ * Dealer: if you run 2+ parts of a brand, every Parts Pack holds a card of your top brand for a slot you don't run it in
+ * yet. An existing card of that brand counts; otherwise the last card is swapped (keeping one card per slot).
+ */
+function addDealerCard(state: RunState, rng: Rng, cards: PackCard[]): void {
+  const brand = dealerBrand(state);
+  if (!brand) return;
+  const brandOf = (id: string) => CONTENT.parts.find((p) => p.id === id)?.brand;
+  const have = cards.findIndex((c) => c.kind === 'part' && brandOf(c.partId) === brand);
+  if (have >= 0) {
+    (cards[have] as Extract<PackCard, { kind: 'part' }>).dealer = true;
+    return;
+  }
+  const keep = cards.slice(0, Math.max(0, cards.length - 1));
+  const usedSlots = new Set(keep.flatMap((c) => (c.kind === 'part' ? [CONTENT.parts.find((p) => p.id === c.partId)!.slot] : [])));
+  const cands = CONTENT.parts.filter(
+    (p) => p.brand === brand && !usedSlots.has(p.slot) && brandOf(state.parts[p.slot]?.partId ?? '') !== brand,
+  );
+  if (!cands.length) return;
+  const card: PackCard = { kind: 'part', partId: rng.pick(cands).id, dealer: true };
+  if (cards.length) cards[cards.length - 1] = card;
+  else cards.push(card);
 }
 
 export function rollPowerPack(state: RunState, rng: Rng): PackCard[] {

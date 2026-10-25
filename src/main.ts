@@ -6,6 +6,7 @@ import { TitleScene } from './scenes/TitleScene';
 import { ShopScene } from './scenes/ShopScene';
 import { StagingScene } from './scenes/StagingScene';
 import { RaceScene } from './scenes/RaceScene';
+import { Race3DScene } from './scenes/Race3DScene';
 import { ResultScene } from './scenes/ResultScene';
 import { GameOverScene } from './scenes/GameOverScene';
 import { VictoryScene } from './scenes/VictoryScene';
@@ -20,7 +21,7 @@ import { RunSetupScene } from './scenes/RunSetupScene';
 const MENU_SCENES = new Set(['Title', 'RunSetup', 'Shop', 'Garage', 'GameOver', 'Victory']);
 function syncMusic(key: string) {
   if (MENU_SCENES.has(key)) return playMusic('menu');
-  if (key !== 'Staging' && key !== 'Race') return;
+  if (key !== 'Staging' && key !== 'Race' && key !== 'Race3D') return;
   try {
     const op = game.currentOpponent();
     playMusic(`${op.race === 3 ? 'boss' : 'race'}${Math.min(4, Math.max(1, op.round))}` as TrackId);
@@ -41,10 +42,20 @@ async function start() {
     width: GAME_W,
     height: GAME_H,
     backgroundColor: PAL.bg,
+    // A context with alpha so the 3D mode's three.js canvas can show through from behind (render/three/renderer.ts).
+    // transparent:true also zeroes the clear colour, so preBoot puts the opaque PAL.bg back: 2D stays pixel-identical.
+    transparent: true,
+    callbacks: {
+      preBoot: (g) => g.config.backgroundColor.setTo((PAL.bg >> 16) & 255, (PAL.bg >> 8) & 255, PAL.bg & 255, 255),
+      postBoot: (g) => {
+        const r = g.renderer as unknown as { gl?: unknown; config: { transparent?: boolean } };
+        if (!r.gl) r.config.transparent = false; // Canvas renderer: keep filling the background
+      },
+    },
     pixelArt: true,
     roundPixels: true,
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-    scene: [BootScene, TitleScene, ShopScene, StagingScene, RaceScene, ResultScene, GameOverScene, VictoryScene, GarageScene, RunSetupScene],
+    scene: [BootScene, TitleScene, ShopScene, StagingScene, RaceScene, Race3DScene, ResultScene, GameOverScene, VictoryScene, GarageScene, RunSetupScene],
   });
   phaserGame.events.once(Phaser.Core.Events.READY, () => {
     for (const sc of phaserGame.scene.scenes) sc.events.on(Phaser.Scenes.Events.CREATE, () => syncMusic(sc.scene.key));

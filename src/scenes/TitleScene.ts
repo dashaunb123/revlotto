@@ -6,14 +6,17 @@
 //   subtitle y 96, progress line y 108             buttons x 240..400: NEW RUN y124, CONTINUE y160
 //   HOW TO PLAY (240,y+8,160,20)  PAINT SHOP (+26)  key hint below
 //   road y 296..360 with a car launching at ground y 334
+//   GRAPHICS 2D/3D switch (right column, cx 540): label y 122, switch 128x24 at y 134, QUALITY y 170 + LOW/MED/HIGH y 182
 import Phaser from 'phaser';
 import { game, hasSavedRun, loadSavedRun } from '../game/game';
 import { goToPhase } from './nav';
 import { GAME_W, PAL, hex } from '../render/palette';
-import { button, drawFlame, drawPanel, heatColor, pop, sfx, shadowTxt, shake, txt, type Button } from '../render/ui';
+import { burst, button, drawFlame, drawPanel, heatColor, hitBox, pop, sfx, shadowTxt, shake, txt, type Button } from '../render/ui';
 import { ensureTextures } from '../render/icons';
 import { carVisualForOpponent, carVisualFromParts, makeCar } from '../render/car';
 import { loadLook } from '../game/cosmetics';
+import { settings, type Quality } from '../game/settings';
+import { preloadShowcase, webgl2Ok } from '../render/three/showcaseSlot';
 
 const LOGO = 'REVLOTTO';
 const LOGO_COLORS = [PAL.yellow, PAL.yellow, PAL.orange, PAL.orange, PAL.red, PAL.red, PAL.pink, PAL.pink];
@@ -83,6 +86,7 @@ export class TitleScene extends Phaser.Scene {
     txt(this, 320, y + 28, 'ENTER: NEW RUN  H: HELP  G: PAINT', 8, PAL.inkDim, [0.5, 0]);
     pop(this, newBtn.container, 1.1, 300);
     this.drawProgress();
+    this.buildGraphicsToggle();
 
     this.input.keyboard?.on('keydown', (e: KeyboardEvent) => {
       if (this.help) {
@@ -98,19 +102,153 @@ export class TitleScene extends Phaser.Scene {
     this.runAttract();
   }
 
+  /**
+   * GRAPHICS: a chunky 2D/3D switch (3D wears a NEW! chip) plus a LOW/MED/HIGH quality row while 3D is on.
+   * Persisted in settings; without WebGL2 the 3D half reads NOT SUPPORTED and the switch stays on 2D.
+   */
+  private buildGraphicsToggle() {
+    const CX = 540;
+    const W = 128;
+    const H = 24;
+    const X = CX - W / 2;
+    const Y = 134;
+    const ok = webgl2Ok();
+    if (!ok && settings.renderMode() === '3d') settings.setRenderMode('2d');
+    if (ok) preloadShowcase();
+    shadowTxt(this, CX, 122, 'GRAPHICS', 8, PAL.inkDim, [0.5, 0]);
+    const sw = this.add.container(X, Y);
+    const g = this.add.graphics();
+    const knob = this.add.graphics();
+    const l2 = txt(this, W / 4, H / 2, '2D', 8, PAL.ink, [0.5, 0.5]);
+    const l3 = txt(this, (W * 3) / 4, H / 2, ok ? '3D' : 'N/A', 8, PAL.ink, [0.5, 0.5]);
+    for (const l of [l2, l3]) l.setShadow(1, 1, hex(PAL.bgDeep), 0, false, true);
+    sw.add([g, knob, l2, l3]);
+    sw.setSize(W, H);
+    hitBox(sw, 0, 0, W, H);
+    if (sw.input) sw.input.cursor = 'pointer';
+    // the NEW! chip on the 3D half (tilted sticker, gently pulsing)
+    const chip = this.add.container(X + W - 6, Y - 2);
+    const cg = this.add.graphics();
+    cg.fillStyle(PAL.bgDeep, 1).fillRect(-17, -5, 36, 12);
+    cg.fillStyle(PAL.yellow, 1).fillRect(-18, -6, 36, 12);
+    cg.fillStyle(0xffffff, 0.35).fillRect(-18, -6, 36, 1);
+    chip.add([cg, txt(this, 0, 0, 'NEW!', 8, PAL.bgDeep, [0.5, 0.5])]);
+    chip.setAngle(8);
+    this.tweens.add({ targets: chip, scale: 1.12, duration: 520, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    if (!ok) {
+      chip.setVisible(false);
+      const ns = this.add.container(CX, Y + H + 12);
+      const ng = this.add.graphics();
+      const nt = txt(this, 0, 0, 'NOT SUPPORTED', 8, PAL.ink, [0.5, 0.5]);
+      const nw = Math.ceil(nt.width) + 12;
+      ng.fillStyle(PAL.bgDeep, 1).fillRect(-nw / 2 + 2, -5, nw, 12);
+      ng.fillStyle(PAL.red, 1).fillRect(-nw / 2, -7, nw, 12);
+      ns.add([ng, nt]);
+    }
+
+    let hover = false;
+    let kx = settings.renderMode() === '3d' ? W / 2 : 0;
+    const draw = () => {
+      const on3 = settings.renderMode() === '3d';
+      g.clear();
+      g.fillStyle(PAL.bgDeep, 1).fillRect(2, 2, W, H); // drop shadow
+      g.fillStyle(hover ? PAL.panelLight : PAL.panelEdge, 1).fillRect(0, 0, W, H);
+      g.fillStyle(PAL.bgDeep, 1).fillRect(2, 2, W - 4, H - 4);
+      if (!ok) for (let x = W / 2 + 4; x < W - 4; x += 6) g.fillStyle(PAL.panel, 1).fillRect(x, 4, 2, H - 8);
+      knob.clear();
+      const col = on3 ? PAL.teal : PAL.orange;
+      knob.fillStyle(0x000000, 0.35).fillRect(kx + 3, 5, W / 2 - 4, H - 6);
+      knob.fillStyle(col, 1).fillRect(kx + 2, 2, W / 2 - 4, H - 4);
+      knob.fillStyle(0xffffff, hover ? 0.35 : 0.22).fillRect(kx + 2, 2, W / 2 - 4, 2);
+      knob.fillStyle(0x000000, 0.2).fillRect(kx + 2, H - 4, W / 2 - 4, 2);
+      l2.setColor(hex(on3 ? PAL.inkDim : PAL.ink));
+      l3.setColor(hex(!ok ? PAL.panelEdge : on3 ? PAL.ink : PAL.inkDim));
+    };
+    // quality row (only while 3D is on)
+    const qual = this.add.container(0, 0);
+    qual.add(shadowTxt(this, CX, 168, 'QUALITY', 8, PAL.inkDim, [0.5, 0]));
+    const QS: [Quality, string][] = [['low', 'LOW'], ['medium', 'MED'], ['high', 'HIGH']];
+    const qDraw: (() => void)[] = [];
+    QS.forEach(([q, label], i) => {
+      const bw = 40;
+      const bx = X + i * (bw + 4);
+      const c = this.add.container(bx, 180);
+      const bg = this.add.graphics();
+      const t = txt(this, bw / 2, 8, label, 8, PAL.ink, [0.5, 0.5]);
+      t.setShadow(1, 1, hex(PAL.bgDeep), 0, false, true);
+      c.add([bg, t]);
+      c.setSize(bw, 16);
+      hitBox(c, 0, 0, bw, 16);
+      if (c.input) c.input.cursor = 'pointer';
+      let hv = false;
+      const d = () => {
+        const sel = settings.get().quality === q;
+        const lift = hv && !sel ? -1 : 0;
+        bg.clear();
+        bg.fillStyle(PAL.bgDeep, 1).fillRect(0, 2, bw, 16);
+        bg.fillStyle(sel ? PAL.yellow : PAL.panelLight, 1).fillRect(0, lift, bw, 16);
+        bg.fillStyle(0xffffff, sel ? 0.3 : hv ? 0.2 : 0.1).fillRect(0, lift, bw, 2);
+        t.setY(8 + lift).setColor(hex(sel ? PAL.bgDeep : PAL.ink)).setShadow(sel ? 0 : 1, sel ? 0 : 1, hex(PAL.bgDeep), 0, false, true);
+      };
+      qDraw.push(d);
+      c.on('pointerover', () => ((hv = true), d(), sfx('hover')));
+      c.on('pointerout', () => ((hv = false), d()));
+      c.on('pointerup', () => {
+        if (settings.get().quality === q) return;
+        settings.setQuality(q);
+        sfx('click');
+        qDraw.forEach((f) => f());
+        pop(this, c, 1.15, 180);
+      });
+      d();
+      qual.add(c);
+    });
+    const showQual = (on: boolean, anim: boolean) => {
+      this.tweens.killTweensOf(qual);
+      if (!anim) return void qual.setAlpha(on ? 1 : 0).setY(0).setVisible(on);
+      qual.setVisible(true);
+      this.tweens.add({ targets: qual, alpha: on ? 1 : 0, y: on ? 0 : -6, duration: 160, ease: 'Cubic.easeOut', onComplete: () => qual.setVisible(on) });
+    };
+    sw.on('pointerover', () => ((hover = true), draw(), sfx('hover')));
+    sw.on('pointerout', () => ((hover = false), draw()));
+    sw.on('pointerup', () => {
+      if (!ok) {
+        sfx('error');
+        shake(this, sw, 3);
+        return;
+      }
+      const to3 = settings.renderMode() !== '3d';
+      settings.setRenderMode(to3 ? '3d' : '2d');
+      const k = { x: kx };
+      this.tweens.add({ targets: k, x: to3 ? W / 2 : 0, duration: 150, ease: 'Back.easeOut', onUpdate: () => ((kx = k.x), draw()), onComplete: () => ((kx = k.x), draw()) });
+      draw();
+      showQual(to3, true);
+      if (to3) {
+        sfx('pick');
+        preloadShowcase();
+        pop(this, chip, 1.5, 300);
+        burst(this, X + (W * 3) / 4, Y + H / 2, [PAL.teal, PAL.ink, PAL.blue], 18, 90, 20);
+      } else sfx('click');
+    });
+    draw();
+    showQual(settings.renderMode() === '3d', false);
+  }
+
   /** Meta progress, kept subtle: best heat unlocked, runs won, furthest endless round. */
   private drawProgress() {
     const m = safe(() => game.meta(), null);
     if (!m) return;
     const parts: string[] = [];
-    if (m.heatUnlocked > 0) parts.push(`HEAT ${m.heatUnlocked} UNLOCKED`);
+    // heat is earned per car, so the summary is the highest heat beaten with any car
+    const topHeat = Math.max(-1, ...Object.values(m.bestHeatByCar));
+    if (topHeat >= 0) parts.push(`TOP HEAT ${topHeat} BEATEN`);
     if (m.runsWon > 0) parts.push(`${m.runsWon} WIN${m.runsWon === 1 ? '' : 'S'}`);
     if (m.bestEndlessRound > 4) parts.push(`ENDLESS RND ${m.bestEndlessRound}`);
     if (!parts.length) return;
     const t = txt(this, 320, 108, parts.join('  -  '), 8, PAL.panelEdge, [0.5, 0]);
-    if (m.heatUnlocked > 0) {
+    if (topHeat >= 0) {
       const g = this.add.graphics();
-      drawFlame(g, Math.round(t.x - t.width / 2) - 12, 107, heatColor(m.heatUnlocked));
+      drawFlame(g, Math.round(t.x - t.width / 2) - 12, 107, heatColor(Math.max(1, topHeat)));
     }
   }
 

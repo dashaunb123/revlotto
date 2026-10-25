@@ -56,16 +56,21 @@
 </div>
 <script>window.DEVLOG = { agents: {}, overview: null };</script>
 <script src="devlog/status/overview.js"></script>
-<script src="devlog/status/p_core.js"></script>
-<script src="devlog/status/p_abilities.js"></script>
-<script src="devlog/status/p_visual.js"></script>
-<script src="devlog/status/p_ui.js"></script>
+<script src="devlog/status/d3_core.js"></script>
+<script src="devlog/status/d3_cine.js"></script>
+<script src="devlog/status/d3_env.js"></script>
+<script src="devlog/status/d3_look.js"></script>
+<script src="devlog/status/d3_carsA.js"></script>
+<script src="devlog/status/d3_carsB.js"></script>
+<script src="devlog/status/d3_carsC.js"></script>
+<script src="devlog/status/d3_kit.js"></script>
+<script src="devlog/status/d3_show.js"></script>
 <script src="devlog/status/integration.js"></script>
 <script src="devlog/status/activity.js"></script>
 <script>
 (function () {
   const D = window.DEVLOG, ov = D.overview || {};
-  const order = ['p_core', 'p_abilities', 'p_visual', 'p_ui', 'integration'];
+  const order = ['d3_core', 'd3_cine', 'd3_env', 'd3_look', 'd3_carsA', 'd3_carsB', 'd3_carsC', 'd3_kit', 'd3_show', 'integration'];
   const agents = order.map(k => D.agents[k] && Object.assign(D.agents[k], { key: k })).filter(Boolean);
   const actHtml = k => {
     const x = D.activity && D.activity.agents[k];
